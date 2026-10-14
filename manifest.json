@@ -1,0 +1,8 @@
+{
+  "name": "Dashboard Sportif",
+  "short_name": "TdB Sport",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#e74c3c"
+}

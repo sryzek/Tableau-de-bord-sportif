@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#e74c3c" />
+<link rel="manifest" href="manifest.json" />
+<title>Tableau de Bord Sportif — Garmin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<!-- Ajout du décodeur de fichiers FIT Garmin -->
+<script src="https://cdn.jsdelivr.net/npm/fit-file-parser@1.9.0/dist/fit-parser.js"></script>
+<style>
+:root{
+  --brand:#e74c3c; 
+  --text:#222;
+  --muted:#666;
+  --ok:#1BAE70;
+  --warn:#F39C12;
+  --bad:#E74C3C;
+  --border:#e8e8e8;
+  --ghost:#9aa3af;
+  --bg-panel: #f8f9fc;
+}
+
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, select, input, .clickable-row, .hof-card, .tab-btn, .modal-tab-btn {
+  user-select: none;
+}
+
+html,body{
+  margin:0;
+  padding:0;
+  font-family:Calibri,Arial,sans-serif;
+  color:var(--text);
+  font-size:13px;
+  background: #f5f7fb;
+}
+
+.wrap{ max-width:1400px; margin:0 auto; padding:8px 10px 24px; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+
+.sticky-header-group {
+  position: sticky; top: 0; z-index: 50; background: #f5f7fb;
+  padding: 8px 10px 0px; margin: -8px -10px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05); box-shadow: 0 6px 15px rgba(0,0,0,0.03);
+}
+
+.bar{
+  background:var(--brand); color:#fff; border-radius:18px; padding:8px 14px;
+  box-shadow:0 8px 18px rgba(0,0,0,.25); margin-bottom:6px; position:relative;
+}
+.bar::before{ content:""; position:absolute; inset:0; border-radius:18px; border:1px solid rgba(255,255,255,.25); pointer-events:none; }
+.bar-inner{ position:relative; min-height:50px; display:flex; align-items:center; justify-content:center; padding:2px 10px; }
+.title{text-align:center; width: 100%;}
+.title .date{ font-weight:700; font-size:14px; letter-spacing:.2px; margin-bottom:2px; text-transform:uppercase; }
+.title .name{ font-weight:900; font-size:28px; line-height:1.1; margin:0 auto; }
+.title .meta-line{ margin-top:2px; font-size:13px; opacity:.9; }
+.bar .ver{ position:absolute; right:10px; top:6px; font-size:10px; opacity:.85; font-weight:700; }
+
+.toolbar{ margin:4px 0 2px; display:flex; flex-wrap:wrap; align-items: center; gap:8px; }
+.btn{ border:none; border-radius:999px; padding:8px 14px; font-size:13px; cursor:pointer; background:#2c3e50; color:#fff; box-shadow:0 3px 8px rgba(0,0,0,.18); display:inline-flex; align-items:center; justify-content: center; gap:6px; font-weight:bold; }
+.btn.secondary{ background:#e5e7eb; color:#111827; box-shadow:none; }
+.btn:hover{filter:brightness(1.1)}
+
+.filter-group { display: flex; align-items: center; gap: 6px; background: #fff; padding: 4px 12px; border-radius: 999px; border: 1px solid #dde2f1; font-weight: bold; color: #4b5563; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+.filter-group input[type="date"] { border: none; background: #f5f7fb; border-radius: 4px; padding: 4px 6px; font-family: inherit; font-size: 13px; outline: none; color: var(--text); cursor: pointer; }
+.filter-btn { background: var(--brand); color: #fff; border: none; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; cursor: pointer; }
+.filter-btn:hover { filter: brightness(1.1); }
+
+.tabs-header { display: flex; gap: 4px; margin-top: 10px; padding-bottom: 0; border-bottom: 2px solid #dde2f1; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.tabs-header::-webkit-scrollbar { display: none; }
+.tab-btn { background: #e1e5f2; border: none; padding: 10px 18px; border-radius: 8px 8px 0 0; font-weight: 700; color: #4b5563; cursor: pointer; white-space: nowrap; }
+.tab-btn.active { background: #fff; color: var(--brand); border: 1px solid #dde2f1; border-bottom: 2px solid #fff; margin-bottom: -2px; }
+.tab-content { display: none; padding-top: 12px; }
+.tab-content.active { display: block; }
+
+.section{margin-top:12px;}
+.box{ border:1px solid var(--border); border-radius:12px; padding:16px; background:#fff; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+.sect{ font-weight:900; font-size:13px; text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px; border-bottom: 1px solid #f0f0f0; padding-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 4px; }
+.sect-period { font-size: 12px; color: var(--muted); font-weight: normal; text-transform: none; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.kpi-card { background: var(--bg-panel); border: 1px solid #dde2f1; border-radius: 8px; padding: 12px; text-align: center; }
+.kpi-title { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+.kpi-val { font-size: 28px; font-weight: 900; color: var(--text); line-height: 1; }
+.kpi-sub { font-size: 11px; margin-top: 4px; font-weight: 600; }
+.text-ok { color: var(--ok); } .text-warn { color: var(--warn); } .text-bad { color: var(--bad); }
+
+.hof-card { background: #fff; border: 1px solid #dde2f1; border-radius: 8px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative; overflow: hidden; }
+.hof-card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); border-color: var(--brand); }
+.hof-card::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: var(--brand); opacity: 0.5; }
+.hof-title { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; gap: 4px; }
+.hof-val { font-size: 24px; font-weight: 900; color: var(--text); line-height: 1.1; margin-bottom: 8px; }
+.hof-sub { font-size: 11px; font-weight: 600; color: #3498db; }
+.hof-date { font-size: 10px; color: #999; margin-top: 2px; }
+
+.charts-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 15px; }
+.chart-container { position: relative; height: 280px; width: 100%; display: flex; align-items: center; justify-content: center; }
+.col-chart-grid { display: grid; grid-template-columns: 2fr 3fr; gap: 15px; margin-bottom: 15px; }
+
+.table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 10px; border-radius: 6px; }
+table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 600px; }
+table.data-table th, table.data-table td { border: 1px solid #dde2f1; padding: 8px 10px; text-align: left; }
+table.data-table th { background: #f1f3f9; font-weight: 700; text-transform: uppercase; font-size: 11px; }
+.badge { padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; color: #fff; white-space: nowrap; }
+.badge-sport { background: #2c3e50; } .badge-neutral { background: var(--ghost); }
+
+.clickable-row { cursor: pointer; transition: background-color 0.2s; }
+.clickable-row:hover { background-color: #eaf0f6; }
+
+/* Modale Principale */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 15px; }
+.modal-content { background-color: #f5f7fb; border-radius: 12px; width: 100%; max-width: 1100px; max-height: 95vh; display: flex; flex-direction: column; box-shadow: 0 15px 30px rgba(0,0,0,0.3); overflow: hidden; animation: fadeIn 0.3s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.modal-header { background: var(--brand); color: #fff; padding: 15px 20px 0; display: flex; flex-direction: column; }
+.modal-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+.modal-header-titles h2 { margin: 0; font-size: 20px; font-weight: 900; line-height: 1.2; }
+.modal-header-titles p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
+.close-btn { color: #fff; font-size: 28px; font-weight: bold; cursor: pointer; background: none; border: none; padding: 0; line-height: 1; }
+.close-btn:hover { color: #f0f0f0; }
+
+.modal-tabs { display: flex; gap: 4px; border-bottom: 2px solid rgba(255,255,255,0.2); }
+.modal-tab-btn { background: transparent; border: none; padding: 8px 16px; font-weight: 700; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.modal-tab-btn:hover { color: #fff; }
+.modal-tab-btn.active { color: #fff; border-bottom: 2px solid #fff; }
+.modal-tab-content { display: none; flex-direction: column; gap: 15px; padding: 15px; overflow-y: auto; }
+.modal-tab-content.active { display: flex; }
+
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+.detail-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.detail-card h3 { margin: 0 0 10px 0; font-size: 12px; color: var(--muted); text-transform: uppercase; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px; }
+.detail-item { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+.detail-item strong { color: var(--text); font-weight: 600; }
+.detail-item span { color: var(--brand); font-weight: 700; }
+
+.fractionne-zone { background: #fff; border: 2px dashed #dde2f1; border-radius: 8px; padding: 15px; text-align: center; }
+.fractionne-zone h3 { margin: 0 0 8px 0; color: #2c3e50; }
+.fractionne-zone p { margin: 0 0 12px 0; font-size: 12px; color: var(--muted); }
+.interval-chart-wrapper { height: 350px; width: 100%; margin-top: 5px; display: none; overflow-x: auto; overflow-y: hidden; padding-bottom: 10px; }
+.interval-chart-inner { position: relative; height: 100%; min-width: 100%; }
+
+.interval-chart-wrapper::-webkit-scrollbar { height: 8px; }
+.interval-chart-wrapper::-webkit-scrollbar-track { background: #f1f3f9; border-radius: 4px; }
+.interval-chart-wrapper::-webkit-scrollbar-thumb { background: #c9d1d9; border-radius: 4px; }
+.interval-chart-wrapper::-webkit-scrollbar-thumb:hover { background: #9aa3af; }
+
+.data-status { font-weight:bold; color: #2c3e50; background: #e1e5f2; padding: 4px 10px; border-radius: 12px; font-size: 12px; }
+
+/* Comparateur Styles */
+.comp-controls { display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap; background:var(--bg-panel); padding:12px; border-radius:8px; border:1px solid #dde2f1; }
+.comp-panel { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #dde2f1; margin-bottom: 15px; }
+.comp-date-box { flex: 1; min-width: 250px; padding: 10px; background: #f5f7fb; border-radius: 6px; border: 1px solid #dde2f1; }
+.comp-date-box h4 { margin: 0 0 10px 0; color: #2c3e50; }
+.delta-pos { color: #1BAE70; font-weight: bold; }
+.delta-neg { color: #E74C3C; font-weight: bold; }
+.delta-neu { color: #666; font-weight: bold; }
+
+@media (max-width: 768px) {
+  .wrap { padding: 4px 6px 12px; padding-top: env(safe-area-inset-top); }
+  .sticky-header-group { padding: 6px 6px 0px; margin: -6px -6px 0; }
+  .title .name { font-size: 20px; } .title .date { font-size: 12px; } .bar .ver { display: none; }
+  .toolbar { flex-direction: column; align-items: stretch; gap: 6px; }
+  .btn, .filter-btn { width: 100%; padding: 10px; font-size: 14px;}
+  .filter-group { flex-direction: column; width: 100%; padding: 10px; border-radius: 12px; align-items: stretch; }
+  .filter-group label { display: none; }
+  .filter-group input[type="date"] { width: 100%; margin-bottom: 6px; padding: 8px; text-align: center; }
+  .col-chart-grid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .chart-container { height: 220px; }
+  .modal-tab-content { padding: 10px; }
+  .comp-controls { flex-direction: column; }
+}
+
+@page{ size: A4 landscape; margin: 10mm; }
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { background: #fff !important; }
+  .sticky-header-group, .toolbar, .tabs-header, .no-print, .modal { display: none !important; }
+  .tab-content:not(.active) { display: none !important; }
+  .wrap { max-width: none !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+  .bar { background: var(--brand) !important; box-shadow: none !important; border-radius: 8px !important; padding: 8px 14px !important; margin-bottom: 10px !important; }
+  .box { border: 1px solid #ccc !important; box-shadow: none !important; padding: 12px !important; page-break-inside: avoid; }
+  .table-responsive { overflow: visible !important; }
+  table.data-table { min-width: auto !important; width: 100% !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="printRoot">
+  <div class="sticky-header-group">
+    <div class="bar">
+      <div class="bar-inner">
+        <div class="title">
+          <div class="date">SUIVI SPORTIF — GARMIN CONNECT</div>
+          <div class="name">Tableau de Bord des Activités</div>
+          <div class="meta-line">Mise à jour : <span id="lblDate"></span> | Source : <span id="lblSource">Cache Local</span></div>
+        </div>
+        <div class="ver">V15.0 (Tout-en-un CSV & FIT)</div>
+      </div>
+    </div>
+    
+    <div class="toolbar">
+      <input type="file" id="mainFileInput" accept=".csv, .fit" style="display:none;" onchange="processFiles(event)" multiple>
+      <button class="btn" onclick="document.getElementById('mainFileInput').click()">📥 Ajouter / Importer (CSV ou FIT)</button>
+      
+      <button class="btn secondary" onclick="exportDataJson()">💾 Sauvegarder JSON</button>
+      <input type="file" id="jsonInput" accept=".json" style="display:none;" onchange="importDataJson(event)">
+      <button class="btn secondary" onclick="document.getElementById('jsonInput').click()">📂 Restaurer JSON</button>
+      
+      <div class="filter-group">
+        <label for="filterMin">Du</label><input type="date" id="filterMin">
+        <label for="filterMax">au</label><input type="date" id="filterMax">
+        <button class="filter-btn" onclick="applyDateFilter()">Filtrer</button>
+      </div>
+      <button class="btn secondary" onclick="window.print()">🖨️ PDF</button>
+      
+      <button class="btn" style="background:var(--bad); margin-left:auto;" onclick="resetData()">🗑️ Tout effacer</button>
+    </div>
+    
+    <div class="tabs-header" id="tabsNav">
+      <button class="tab-btn active" onclick="switchTab('tab-global', this)">Synthèse Globale</button>
+      <button class="tab-btn" onclick="switchTab('tab-records', this); buildPalmares();">🏆 Palmarès & Records</button>
+      <button class="tab-btn" onclick="switchTab('tab-compare', this); initCompare();">⚖️ Comparateur & Progression</button>
+    </div>
+  </div> 
+
+  <!-- CONTENU: SYNTHÈSE GLOBALE -->
+  <div id="tab-global" class="tab-content active">
+    <div class="section" id="section-effort-global">
+      <div class="box">
+        <div class="sect">
+          <span>BILAN GLOBAL DES ACTIVITÉS</span>
+          <span class="sect-period" id="globalPeriodText">Période : Aucune donnée</span>
+        </div>
+        <div class="kpi-grid" style="margin-bottom: 20px;">
+          <div class="kpi-card"><div class="kpi-title">Total Activités</div><div class="kpi-val" id="globalKpiCount">0</div></div>
+          <div class="kpi-card"><div class="kpi-title">Distance Cumulée</div><div class="kpi-val text-ok" id="globalKpiDist">0</div><div class="kpi-sub">kilomètres</div></div>
+          <div class="kpi-card"><div class="kpi-title">Temps d'Effort</div><div class="kpi-val text-warn" id="globalKpiTime">00:00:00</div><div class="kpi-sub">cumulé</div></div>
+          <div class="kpi-card"><div class="kpi-title">Dénivelé +</div><div class="kpi-val text-bad" id="globalKpiElev">0</div><div class="kpi-sub">mètres</div></div>
+        </div>
+        <div class="charts-grid"><div class="chart-container"><canvas id="globalBarChart"></canvas></div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="box">
+        <div class="sect">RÉPARTITION ET SYNTHÈSE PAR TYPE DE SPORT</div>
+        <div class="table-responsive">
+          <table class="data-table" id="tableSyntheseSports">
+            <thead><tr><th style="width:25%">Type d'activité</th><th style="width:15%">Séances</th><th style="width:20%">Distance</th><th style="width:20%">Temps</th><th style="width:20%">Dénivelé</th></tr></thead>
+            <tbody><tr><td colspan="5" style="text-align:center; color:#999; font-style:italic;">Importe tes fichiers Garmin...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="box">
+        <div class="sect">JOURNAL COMPLET DES SÉANCES RÉCENTES</div>
+        <div class="table-responsive">
+          <table class="data-table" id="tableJournalGlobal">
+            <thead><tr><th style="width:15%">Date</th><th style="width:15%">Sport</th><th style="width:30%">Titre</th><th style="width:15%">Distance</th><th style="width:15%">Durée</th><th style="width:10%">Vitesse Moy.</th></tr></thead>
+            <tbody><tr><td colspan="6" style="text-align:center; color:#999; font-style:italic;">Importe tes fichiers Garmin...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONGLET: PALMARES -->
+  <div id="tab-records" class="tab-content">
+    <div id="hof-container">
+       <p style="text-align:center; padding:20px;">Analyse des records en cours...</p>
+    </div>
+  </div>
+
+  <!-- ONGLET: COMPARATEUR -->
+  <div id="tab-compare" class="tab-content">
+    <div class="section">
+      <div class="box">
+        <div class="sect"><span>COMPARATEUR DE PERFORMANCE ET DE CHARGE</span></div>
+        <div class="comp-controls">
+          <div>
+            <label style="font-weight:bold;">1. Sport à analyser :</label><br>
+            <select id="compSport" onchange="initCompareMode()" style="padding:6px 10px; border-radius:6px; margin-top:5px; border:1px solid #ccc;"></select>
+          </div>
+          <div>
+            <label style="font-weight:bold;">2. Type d'analyse :</label><br>
+            <select id="compMode" onchange="initCompareMode()" style="padding:6px 10px; border-radius:6px; margin-top:5px; border:1px solid #ccc;">
+              <option value="macro">Macro (Comparer 2 Périodes d'entraînement)</option>
+              <option value="micro">Micro (Suivre l'évolution d'une séance spécifique)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- PANNEAU MACRO -->
+        <div id="panel-macro" class="comp-panel" style="display:none;">
+           <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:15px;">
+              <div class="comp-date-box">
+                <h4>📅 Période A (Référence)</h4>
+                Du <input type="date" id="compA_min" style="margin-right:10px; padding:4px; border:1px solid #ccc; border-radius:4px;"> 
+                Au <input type="date" id="compA_max" style="padding:4px; border:1px solid #ccc; border-radius:4px;">
+              </div>
+              <div class="comp-date-box">
+                <h4>📅 Période B (Cible)</h4>
+                Du <input type="date" id="compB_min" style="margin-right:10px; padding:4px; border:1px solid #ccc; border-radius:4px;"> 
+                Au <input type="date" id="compB_max" style="padding:4px; border:1px solid #ccc; border-radius:4px;">
+              </div>
+           </div>
+           <button class="btn" onclick="runMacroCompare()" style="width:100%;">Lancer la comparaison</button>
+           
+           <div class="chart-container" style="height:300px; display:none; margin-top:20px;" id="macroChartWrapper">
+              <canvas id="macroCompareChart"></canvas>
+           </div>
+           <div id="macro-results" style="margin-top:20px;"></div>
+        </div>
+
+        <!-- PANNEAU MICRO (HYBRIDE) -->
+        <div id="panel-micro" class="comp-panel" style="display:none;">
+           <div style="margin-bottom:15px;">
+             <label style="font-weight:bold;">Sélectionne la séance répétée (min. 2 occurrences) :</label><br>
+             <select id="compSessionTitle" onchange="runMicroCompare()" style="padding:6px 10px; border-radius:6px; margin-top:5px; border:1px solid #ccc; max-width:500px;"></select>
+           </div>
+           
+           <h4 style="margin-top:20px; color:#2c3e50; border-bottom:2px solid #f0f0f0; padding-bottom:5px;">1. Évolution Globale de la Séance</h4>
+           <p style="font-size: 12px; color: var(--muted); margin-bottom: 10px;">
+            💡 <strong>Rendement Global :</strong> Ce graphique trace la moyenne de performance et de cardio sur l'intégralité de la séance (échauffement et repos inclus).
+           </p>
+           <div class="chart-container" style="height:300px; margin-bottom: 30px;">
+              <canvas id="microCompareChart"></canvas>
+           </div>
+
+           <h4 style="margin-top:20px; color:#2c3e50; border-bottom:2px solid #f0f0f0; padding-bottom:5px;">2. Analyse de la Régularité (Pacing) des Blocs d'Effort</h4>
+           <p style="font-size: 12px; color: var(--muted); margin-bottom: 10px;">
+            💡 <strong>Indice de Pacing :</strong> Écart entre le bloc d'effort le plus rapide et le plus lent. Plus la courbe approche de zéro, plus tu es régulier ! Les points manquants nécessitent l'importation du détail des circuits.
+           </p>
+           <div class="chart-container" style="height:250px;">
+              <canvas id="microPacingChart"></canvas>
+           </div>
+           <div id="micro-pacing-table" style="margin-top:20px;"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="dynamic-tabs-container"></div>
+</div>
+
+<div id="activityModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-header-top">
+        <div class="modal-header-titles">
+          <h2 id="modalTitle">Titre Activité</h2>
+          <p><span id="modalDate" style="font-weight:bold;">Date</span> — <span class="badge badge-sport" id="modalSport">Sport</span></p>
+        </div>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" id="btn-modal-general" onclick="switchModalTab('tab-modal-general', this)">Résumé & Métriques</button>
+        <button class="modal-tab-btn" id="btn-modal-splits" onclick="switchModalTab('tab-modal-splits', this)" style="display:none;">Analyse Fractionné</button>
+      </div>
+    </div>
+    
+    <div class="modal-tab-content active" id="tab-modal-general">
+      <div class="detail-grid">
+        <div class="detail-card">
+          <h3>🏃 Général</h3>
+          <div class="detail-item"><strong>Distance:</strong> <span id="mdl-dist">-</span></div>
+          <div class="detail-item"><strong>Durée:</strong> <span id="mdl-time">-</span></div>
+          <div class="detail-item"><strong id="lbl-mdl-speed">Vitesse Moy:</strong> <span id="mdl-speed">-</span></div>
+          <div class="detail-item"><strong id="lbl-mdl-speedmax">Vitesse Max:</strong> <span id="mdl-speedmax">-</span></div>
+        </div>
+        <div class="detail-card">
+          <h3>❤️ Effort & Cardio</h3>
+          <div class="detail-item"><strong>FC Moyenne:</strong> <span id="mdl-fcmoy">-</span></div>
+          <div class="detail-item"><strong>FC Maximale:</strong> <span id="mdl-fcmax">-</span></div>
+          <div class="detail-item"><strong>Calories:</strong> <span id="mdl-cal">-</span></div>
+          <div class="detail-item"><strong>TE Aérobie:</strong> <span id="mdl-te">-</span></div>
+        </div>
+        <div class="detail-card">
+          <h3>⛰️ Conditions</h3>
+          <div class="detail-item"><strong>Ascension:</strong> <span id="mdl-asc">-</span></div>
+          <div class="detail-item"><strong>Descente:</strong> <span id="mdl-desc">-</span></div>
+          <div class="detail-item"><strong>Température Min:</strong> <span id="mdl-tmin">-</span></div>
+          <div class="detail-item"><strong>Température Max:</strong> <span id="mdl-tmax">-</span></div>
+        </div>
+        <div class="detail-card">
+          <h3>⚙️ Dynamique</h3>
+          <div class="detail-item"><strong>Cadence Moy:</strong> <span id="mdl-cad">-</span></div>
+          <div class="detail-item"><strong>Foulée Moy:</strong> <span id="mdl-foul">-</span></div>
+          <div class="detail-item"><strong>Tours / Circuits:</strong> <span id="mdl-tours">-</span></div>
+          <div class="detail-item"><strong>Meilleur circuit:</strong> <span id="mdl-best">-</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-tab-content" id="tab-modal-splits">
+      <div class="fractionne-zone" id="fractionneZone">
+        <h3>📊 Analyse du Fractionné</h3>
+        <p id="splitsMessage">Importe le <strong>fichier CSV ou FIT</strong> de cette séance pour visualiser tes blocs.</p>
+        <input type="file" id="splitsInput" accept=".csv, .fit" onchange="processSplitsOrFit(event)" style="font-size: 12px; margin-bottom: 10px;">
+        
+        <div id="intervalLegend" style="display:none; justify-content:center; flex-wrap:wrap; gap:15px; margin-top:5px; font-weight:bold; font-size:12px; color:var(--text);"></div>
+        
+        <div class="interval-chart-wrapper" id="intervalWrapper">
+          <div id="intervalChartInner" class="interval-chart-inner">
+            <canvas id="intervalChartCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+Chart.register(ChartDataLabels);
+let chartInstances = { globalBar: null, cols: {}, intervalModal: null, microChart: null, macroChart: null, microPacingChart: null };
+let allRawActivities = [];
+let dashboardData = { dateMaj: new Date().toLocaleDateString('fr-FR'), kpi: { count: 0, totalDistance: 0, totalDurationSec: 0, totalCalories: 0, totalElevation: 0, minDate: null, maxDate: null }, sports: {}, activities: [] };
+const STORAGE_KEY = 'garmin_dashboard_data_v10';
+let currentOpenedActivityUid = null;
+
+document.addEventListener("DOMContentLoaded", () => { 
+    document.getElementById('lblDate').textContent = dashboardData.dateMaj; 
+    loadDataFromStorage();
+});
+
+window.onclick = function(event) { if (event.target == document.getElementById('activityModal')) closeModal(); }
+function closeModal() { document.getElementById('activityModal').style.display = "none"; currentOpenedActivityUid = null; }
+
+function saveToStorage() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(allRawActivities));
+        document.getElementById('lblSource').textContent = "Cache Local (" + allRawActivities.length + " act.)";
+    } catch(e) {
+        console.error("Erreur de sauvegarde dans le cache local", e);
+        alert("Attention, la mémoire du navigateur est pleine. Pense à faire une sauvegarde JSON.");
+    }
+}
+
+function loadDataFromStorage() {
+    let saved = localStorage.getItem(STORAGE_KEY);
+    if(saved) {
+        try {
+            allRawActivities = JSON.parse(saved);
+            buildDashboardFromActivities(allRawActivities);
+            document.getElementById('lblSource').textContent = "Cache Local (" + allRawActivities.length + " act.)";
+        } catch(e) { console.error("Erreur lecture cache", e); }
+    }
+}
+
+function resetData() {
+    if(confirm("🚨 ATTENTION !\n\nEs-tu sûr de vouloir effacer TOUT l'historique en mémoire ?\n\nPense à faire une sauvegarde JSON avant.")) {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+    }
+}
+
+function exportDataJson() {
+    if(allRawActivities.length === 0) { alert("Aucune donnée à sauvegarder."); return; }
+    const dataStr = JSON.stringify(allRawActivities, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Garmin_Dashboard_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importDataJson(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            if(Array.isArray(importedData)) {
+                allRawActivities = importedData;
+                saveToStorage();
+                buildDashboardFromActivities(allRawActivities);
+                alert("Restauration réussie : " + allRawActivities.length + " activités chargées.");
+            }
+        } catch(err) { alert("Erreur lors de la lecture du fichier JSON."); }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function generateUid(row) {
+    let rawDate = row["Date"] || "nodate";
+    let rawTitle = row["Titre"] || "notitle";
+    let str = rawDate + "_" + rawTitle;
+    return btoa(encodeURIComponent(str)).replace(/=/g, ''); 
+}
+
+// --- V15.0 NOUVEAU MOTEUR MULTI-FORMATS ---
+async function processFiles(event) {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+  
+  let countAdded = 0;
+  
+  for(let i=0; i<files.length; i++) {
+      let file = files[i];
+      let ext = file.name.split('.').pop().toLowerCase();
+      
+      if (ext === 'csv') {
+          await new Promise((resolve) => {
+              Papa.parse(file, { 
+                  header: true, skipEmptyLines: true, 
+                  complete: function(results) { 
+                      countAdded += mergeRawData(results.data); 
+                      resolve();
+                  } 
+              });
+          });
+      } else if (ext === 'fit') {
+          if (typeof FitParser === 'undefined') {
+              alert("Le lecteur de fichier FIT est introuvable. Vérifiez votre connexion internet pour charger le composant.");
+              continue;
+          }
+          await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = function(e) {
+                  const fitParser = new FitParser({ forceSetUnit: true, lengthUnit: 'km', speedUnit: 'km/h' });
+                  fitParser.parse(e.target.result, function(err, data) {
+                      if(!err && data.sessions && data.sessions.length > 0) {
+                          if(addFitToActivities(data, file.name)) countAdded++;
+                      }
+                      resolve();
+                  });
+              };
+              reader.readAsArrayBuffer(file);
+          });
+      }
+  }
+  
+  event.target.value = '';
+  
+  if (countAdded > 0) {
+      allRawActivities.sort((a, b) => {
+          if (!a.isoDate) return 1; if (!b.isoDate) return -1;
+          return b.isoDate.localeCompare(a.isoDate);
+      });
+      saveToStorage();
+      
+      let validDates = allRawActivities.map(a => a.isoDate).filter(d => d);
+      if (validDates.length > 0) {
+        document.getElementById('filterMin').value = validDates[validDates.length - 1];
+        document.getElementById('filterMax').value = validDates[0]; 
+      }
+      applyDateFilter();
+      alert("Import réussi ! " + countAdded + " nouvelle(s) activité(s) ajoutée(s).");
+  } else {
+      alert("Toutes les activités de ce(s) fichier(s) sont déjà en mémoire (ou format invalide).");
+  }
+}
+
+function mergeRawData(rows) {
+  let countAdded = 0;
+  rows.forEach((row) => {
+    let sportName = row["Type d'activité"] || row["Activité"] || row["Type"];
+    if (!sportName) return;
+    let uid = generateUid(row);
+    
+    let exists = allRawActivities.find(a => a.uid === uid);
+    if (!exists) {
+        let sportLower = sportName.toLowerCase();
+        if (sportLower === "autre" || sportLower === "roller") sportName = "Roller / Autre";
+        let isoDate = extractDateString(row["Date"]);
+        let dist = parseNumber(row["Distance"]);
+        let cal = parseNumber(row["Calories"]);
+        let durationStr = row["Durée"] || row["Temps écoulé"] || row["Temps"];
+        let durationSec = parseDuration(durationStr);
+        let elev = parseNumber(row["Ascension totale"] || row["Dénivelé positif"]);
+        
+        let speed = 0;
+        let allureRaw = row["Allure moyenne"] || row["Allure moy."];
+        let vitesseRaw = row["Vitesse moyenne"] || row["Vitesse moy."];
+        
+        if (allureRaw && allureRaw !== '--') {
+            let paceSec = parseDuration(allureRaw);
+            if (paceSec > 0) speed = 3600 / paceSec;
+        } else if (vitesseRaw && vitesseRaw !== '--') {
+            if (String(vitesseRaw).includes(':')) {
+                let paceSec = parseDuration(vitesseRaw);
+                if (paceSec > 0) speed = 3600 / paceSec;
+            } else {
+                speed = parseNumber(vitesseRaw);
+            }
+        }
+        
+        if (speed === 0 && dist > 0 && durationSec > 0) {
+            speed = dist / (durationSec / 3600);
+        }
+        
+        allRawActivities.push({
+            uid: uid, 
+            originalDate: row["Date"] || "Date Inconnue", isoDate: isoDate, title: row["Titre"] || "Activité sans titre",
+            sport: sportName, distance: dist, durationFormatted: durationStr || "--", durationSec: durationSec, speed: speed, elevation: elev, calories: cal, raw: row,
+            savedIntervals: null
+        });
+        countAdded++;
+    }
+  });
+  return countAdded;
+}
+
+// Fonction de conversion magique d'un fichier .FIT vers notre format
+function addFitToActivities(data, filename) {
+    let sess = data.sessions[0];
+    if (!sess) return false;
+    
+    let dObj = new Date(sess.start_time);
+    if(isNaN(dObj.getTime())) return false;
+    
+    let isoDate = dObj.toISOString().split('T')[0];
+    let timeStr = dObj.toTimeString().split(' ')[0];
+    
+    let sportMap = { 'running': 'Course à pied', 'cycling': 'Cyclisme sur route', 'walking': 'Marche à pied', 'swimming': 'Natation', 'inline_skating': 'Roller / Autre' };
+    let sportName = sportMap[sess.sport] || sess.sport || 'Autre';
+    
+    let title = `${sportName} (Import FIT)`;
+    let uid = btoa(encodeURIComponent(isoDate + "_" + timeStr + "_" + sportName)).replace(/=/g, '');
+    
+    let exists = allRawActivities.find(a => a.uid === uid);
+    if (exists) return false;
+    
+    let dist = parseFloat(sess.total_distance) || 0; 
+    let durationSec = parseFloat(sess.total_timer_time || sess.total_elapsed_time) || 0;
+    let speed = parseFloat(sess.avg_speed) || 0; 
+    let cal = parseFloat(sess.total_calories) || 0;
+    let elev = parseFloat(sess.total_ascent) || 0;
+    let fcmoy = parseFloat(sess.avg_heart_rate) || 0;
+    let fcmax = parseFloat(sess.max_heart_rate) || 0;
+    
+    let durationFormatted = formatDuration(durationSec);
+    
+    let intervals = null;
+    if (data.laps && data.laps.length > 0) {
+        intervals = buildIntervalsFromFit(data.laps, sportName);
+    }
+    
+    let rawMock = {
+        'Date': `${dObj.getDate().toString().padStart(2,'0')}/${(dObj.getMonth()+1).toString().padStart(2,'0')}/${dObj.getFullYear()} ${timeStr}`,
+        'Distance': dist,
+        'Durée': durationFormatted,
+        'Vitesse moyenne': speed,
+        'Calories': cal,
+        'Ascension totale': elev,
+        'Fréquence cardiaque moyenne': fcmoy,
+        'Fréquence cardiaque maximale': fcmax,
+        'Type d\'activité': sportName,
+        'Titre': title
+    };
+    
+    allRawActivities.push({
+        uid: uid,
+        originalDate: rawMock['Date'],
+        isoDate: isoDate,
+        title: title,
+        sport: sportName,
+        distance: dist,
+        durationFormatted: durationFormatted,
+        durationSec: durationSec,
+        speed: speed,
+        elevation: elev,
+        calories: cal,
+        raw: rawMock,
+        savedIntervals: intervals
+    });
+    
+    return true;
+}
+
+function buildIntervalsFromFit(laps, sport) {
+    let intervals = [];
+    laps.forEach((lap, idx) => {
+        let dist = parseFloat(lap.total_distance) || 0;
+        let sec = parseFloat(lap.total_timer_time || lap.total_elapsed_time) || 0;
+        let speed = parseFloat(lap.avg_speed) || 0;
+        
+        if(dist <= 0 && sec <= 0) return;
+        
+        let paceSec = 0;
+        if(speed > 0) paceSec = 3600 / speed;
+        else if(dist > 0 && sec > 0) paceSec = sec / dist;
+        
+        let intensity = lap.intensity !== undefined ? lap.intensity : 0;
+        let stepType = "effort";
+        let stepLabel = "Effort";
+        let color = "#e74c3c";
+        
+        if (intensity === 1) { stepType = "récupération"; stepLabel = "Récupération"; color = "#c9d1d9"; }
+        else if (intensity === 2) { stepType = "échauffement"; stepLabel = "Échauffement"; color = "#f39c12"; }
+        else if (intensity === 3) { stepType = "retour au calme"; stepLabel = "Retour au calme"; color = "#3498db"; }
+        
+        intervals.push({
+            label: `T${idx+1}`,
+            dist: dist,
+            sec: sec,
+            paceSec: paceSec,
+            speedKmh: speed,
+            compactTime: formatCompactTime(sec),
+            stepType: stepType,
+            stepLabel: stepLabel,
+            color: color
+        });
+    });
+    return intervals;
+}
+
+function switchModalTab(tabId, btnElement) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btnElement.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+function getRawVal(act, key, fallback = "--") { return (act.raw[key] !== undefined && act.raw[key] !== null && act.raw[key].trim() !== '') ? act.raw[key] : fallback; }
+function formatPace(secPerKm) { if (!secPerKm || secPerKm <= 0) return "--"; let m = Math.floor(secPerKm / 60); let s = Math.round(secPerKm % 60); if (s === 60) { s = 0; m += 1; } return m + ":" + s.toString().padStart(2, '0'); }
+function formatCompactTime(totalSec) { if (!totalSec) return "--"; let m = Math.floor(totalSec / 60); let s = Math.round(totalSec % 60); if (m > 0) return m + "'" + s.toString().padStart(2, '0') + '"'; return s + '"'; }
+
+function getSportColor(sportName) {
+    let s = sportName.toLowerCase();
+    if(s.includes('course')) return '#e74c3c'; 
+    if(s.includes('cyclisme') || s.includes('vélo')) return '#3498db'; 
+    if(s.includes('roller')) return '#f39c12'; 
+    if(s.includes('marche') || s.includes('rando')) return '#2ecc71'; 
+    if(s.includes('natation')) return '#9b59b6'; 
+    if(s.includes('muscu') || s.includes('renfo')) return '#34495e'; 
+    return '#95a5a6'; 
+}
+
+function openActivityDetails(uid) {
+  let act = allRawActivities.find(a => a.uid === uid);
+  if (!act) return;
+  currentOpenedActivityUid = uid;
+  
+  let isPaceBased = (act.sport.toLowerCase().includes('course') || act.sport.toLowerCase().includes('marche'));
+
+  document.getElementById('modalTitle').textContent = act.title;
+  document.getElementById('modalSport').textContent = act.sport;
+  document.getElementById('modalDate').textContent = formatFrenchDate(act.isoDate) || act.originalDate;
+  
+  document.getElementById('mdl-dist').textContent = getRawVal(act, 'Distance') + ' km';
+  document.getElementById('mdl-time').textContent = getRawVal(act, 'Durée');
+  
+  document.getElementById('lbl-mdl-speed').textContent = isPaceBased ? 'Allure Moy:' : 'Vitesse Moy:';
+  document.getElementById('lbl-mdl-speedmax').textContent = isPaceBased ? 'Allure Max:' : 'Vitesse Max:';
+  
+  if (isPaceBased) {
+      document.getElementById('mdl-speed').textContent = act.speed > 0 ? formatPace(3600 / act.speed) + ' /km' : '--';
+  } else {
+      document.getElementById('mdl-speed').textContent = act.speed > 0 ? act.speed.toFixed(1) + ' km/h' : '--';
+  }
+  
+  let speedMaxRaw = getRawVal(act, 'Vitesse max') || getRawVal(act, 'Allure max');
+  document.getElementById('mdl-speedmax').textContent = speedMaxRaw;
+  
+  document.getElementById('mdl-fcmoy').textContent = getRawVal(act, 'Fréquence cardiaque moyenne') + ' bpm';
+  document.getElementById('mdl-fcmax').textContent = getRawVal(act, 'Fréquence cardiaque maximale') + ' bpm';
+  document.getElementById('mdl-cal').textContent = getRawVal(act, 'Calories') + ' kcal';
+  document.getElementById('mdl-te').textContent = getRawVal(act, 'TE aérobie');
+  document.getElementById('mdl-asc').textContent = getRawVal(act, 'Ascension totale') + ' m';
+  document.getElementById('mdl-desc').textContent = getRawVal(act, 'Descente totale') + ' m';
+  document.getElementById('mdl-tmin').textContent = getRawVal(act, 'Température minimale') + ' °C';
+  document.getElementById('mdl-tmax').textContent = getRawVal(act, 'Température maximale') + ' °C';
+  document.getElementById('mdl-cad').textContent = getRawVal(act, 'Cadence de vélo moyenne', getRawVal(act, 'Pas', '--'));
+  document.getElementById('mdl-foul').textContent = getRawVal(act, 'Longueur moyenne des foulées', '--');
+  
+  let tours = getRawVal(act, 'Nombre de tours', '1');
+  document.getElementById('mdl-tours').textContent = tours;
+  document.getElementById('mdl-best').textContent = getRawVal(act, 'Temps du meilleur circuit');
+
+  let numTours = parseNumber(tours);
+  document.getElementById('splitsInput').value = ""; 
+  document.getElementById('intervalLegend').style.display = 'none';
+  if (chartInstances.intervalModal) chartInstances.intervalModal.destroy();
+  
+  switchModalTab('tab-modal-general', document.getElementById('btn-modal-general'));
+
+  if (numTours > 1 || act.savedIntervals) { 
+      document.getElementById('btn-modal-splits').style.display = 'inline-block'; 
+      if (act.savedIntervals && act.savedIntervals.length > 0) {
+          document.getElementById('splitsMessage').innerHTML = "✅ Les données de fractionné sont en mémoire. <em>(Tu peux recharger un fichier pour les écraser)</em>";
+          renderIntervalChart(act.savedIntervals);
+      } else {
+          document.getElementById('splitsMessage').innerHTML = "Importe le <strong>fichier CSV ou FIT</strong> de cette séance pour visualiser tes blocs.";
+          document.getElementById('intervalWrapper').style.display = 'none';
+      }
+  } else { 
+      document.getElementById('btn-modal-splits').style.display = 'none'; 
+  }
+  
+  document.getElementById('activityModal').style.display = "flex";
+}
+
+async function processSplitsOrFit(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  let ext = file.name.split('.').pop().toLowerCase();
+  
+  if (ext === 'csv') {
+      Papa.parse(file, { header: true, skipEmptyLines: true, complete: function(results) { extractSplitsData(results.data); }});
+  } else if (ext === 'fit') {
+      if (typeof FitParser === 'undefined') {
+          alert("Le lecteur de fichier FIT est introuvable. Vérifiez votre connexion internet.");
+          return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+          const fitParser = new FitParser({ forceSetUnit: true, lengthUnit: 'km', speedUnit: 'km/h' });
+          fitParser.parse(e.target.result, function(err, data) {
+              if(!err && data.laps && data.laps.length > 0) {
+                  let act = allRawActivities.find(a => a.uid === currentOpenedActivityUid);
+                  let intervals = buildIntervalsFromFit(data.laps, act ? act.sport : '');
+                  if(act) {
+                      act.savedIntervals = intervals;
+                      saveToStorage();
+                      document.getElementById('splitsMessage').innerHTML = "✅ Données de fractionné (.FIT) sauvegardées avec succès !";
+                      
+                      let activeTabBtn = document.querySelector('.tabs-header button.active');
+                      if (activeTabBtn && activeTabBtn.textContent.includes("Comparateur") && document.getElementById('compMode').value === 'micro') {
+                          runMicroCompare();
+                      }
+                  }
+                  renderIntervalChart(intervals);
+              } else {
+                  alert("Impossible de lire les circuits dans ce fichier FIT.");
+              }
+          });
+      };
+      reader.readAsArrayBuffer(file);
+  }
+  event.target.value = '';
+}
+
+function extractSplitsData(splitRows) {
+  if (splitRows.length === 0) return;
+  let intervals = [];
+  
+  let distKey = Object.keys(splitRows[0]).find(k => k.toLowerCase().includes('distance'));
+  let timeKey = Object.keys(splitRows[0]).find(k => (k.toLowerCase().includes('temps') && !k.toLowerCase().includes('cumulé')) || k.toLowerCase().includes('durée'));
+  let stepTypeKey = Object.keys(splitRows[0]).find(k => k.toLowerCase().includes('étape') || k.toLowerCase().includes('step type'));
+  
+  let paceKey = Object.keys(splitRows[0]).find(k => k.toLowerCase() === 'allure moyenne');
+  let speedKey = Object.keys(splitRows[0]).find(k => k.toLowerCase().includes('vitesse moyenne') || k.toLowerCase().includes('vitesse moy'));
+  
+  splitRows.forEach((row, idx) => {
+    let isSummary = Object.values(row).some(val => {
+        if (typeof val === 'string') {
+            let v = val.toLowerCase();
+            return v.includes('récapitulatif') || v.includes('summary') || v.includes('résumé');
+        }
+        return false;
+    });
+    if (isSummary) return;
+
+    if(distKey && timeKey) {
+      let d = parseNumber(row[distKey]);
+      let t = parseDuration(row[timeKey]);
+      
+      let paceSec = 0;
+      let speedKmh = 0;
+      
+      if (paceKey && row[paceKey] && row[paceKey] !== '--') {
+          paceSec = parseDuration(row[paceKey]); 
+          if(paceSec === 0 && d > 0 && t > 0) paceSec = t / d; 
+      } else if (d > 0 && t > 0) {
+          paceSec = t / d; 
+      }
+      
+      if (speedKey && row[speedKey] && row[speedKey] !== '--') {
+          if (String(row[speedKey]).includes(':')) {
+              let pSec = parseDuration(row[speedKey]);
+              if (pSec > 0) speedKmh = 3600 / pSec;
+          } else {
+              speedKmh = parseNumber(row[speedKey]);
+          }
+      } else if (t > 0) {
+          speedKmh = d / (t / 3600); 
+      }
+        
+      let stepOriginal = stepTypeKey ? (row[stepTypeKey] || "") : "";
+      let stepType = stepOriginal.toLowerCase();
+        
+      intervals.push({ 
+          label: `T${intervals.length+1}`, dist: d, sec: t, 
+          paceSec: paceSec, speedKmh: speedKmh, 
+          compactTime: formatCompactTime(t),
+          stepType: stepType,
+          stepOriginal: stepOriginal
+      });
+    }
+  });
+
+  if (intervals.length === 0) { alert("Impossible de lire les données (ou fichier vide)."); return; }
+  
+  intervals.forEach((interval, index) => {
+      interval.color = null; 
+      if (interval.stepType) {
+          if (interval.stepType.includes('échauffement') || interval.stepType.includes('warm')) {
+              interval.color = '#f39c12'; // Orange
+              interval.stepLabel = "Échauffement";
+          } else if (interval.stepType.includes('course') || interval.stepType.includes('effort') || interval.stepType.includes('run') || interval.stepType.includes('vélo') || interval.stepType.includes('roule')) {
+              interval.color = '#e74c3c'; // Rouge
+              interval.stepLabel = "Effort";
+          } else if (interval.stepType.includes('récup') || interval.stepType.includes('recov') || interval.stepType.includes('repos') || interval.stepType.includes('rest')) {
+              interval.color = '#c9d1d9'; // Gris
+              interval.stepLabel = "Récupération";
+          } else if (interval.stepType.includes('calme') || interval.stepType.includes('cool') || interval.stepType.includes('refroidissement')) {
+              interval.color = '#3498db'; // Bleu
+              interval.stepLabel = "Retour au calme";
+          } else {
+              interval.stepLabel = interval.stepOriginal;
+          }
+      }
+  });
+  
+  if (currentOpenedActivityUid) {
+      let act = allRawActivities.find(a => a.uid === currentOpenedActivityUid);
+      if (act) {
+          act.savedIntervals = intervals;
+          saveToStorage(); 
+          document.getElementById('splitsMessage').innerHTML = "✅ Données de fractionné sauvegardées en mémoire avec succès !";
+          
+          let activeTabBtn = document.querySelector('.tabs-header button.active');
+          if (activeTabBtn && activeTabBtn.textContent.includes("Comparateur") && document.getElementById('compMode').value === 'micro') {
+              runMicroCompare();
+          }
+      }
+  }
+  renderIntervalChart(intervals);
+}
+
+function renderIntervalChart(intervals) {
+  let act = allRawActivities.find(a => a.uid === currentOpenedActivityUid);
+  let sport = act ? act.sport.toLowerCase() : 'course à pied';
+  
+  let isPaceBased = (sport.toLowerCase().includes('course') || sport.toLowerCase().includes('marche'));
+  let labels = intervals.map(i => i.label);
+  
+  let chartData, colors, yAxisOpts, tooltipOpts, dataLabelsOpts;
+
+  let hasProgrammedSteps = intervals.some(i => i.stepType && i.stepType !== "");
+
+  if (!hasProgrammedSteps) {
+      if (isPaceBased) {
+          let paces = intervals.map(i => i.paceSec || (i.sec / i.dist)).filter(p => p > 0 && p < 3000);
+          paces.sort((a,b) => a - b);
+          let medianPace = paces[Math.floor(paces.length / 2)] || 0;
+          let threshold = medianPace * 1.05;
+          intervals.forEach(i => {
+              let p = i.paceSec || (i.sec / i.dist);
+              if(!i.color) i.color = (p <= threshold && p > 0) ? '#e74c3c' : '#c9d1d9';
+          });
+      } else {
+          let speeds = intervals.map(i => i.speedKmh || (i.dist / (i.sec / 3600))).filter(s => s > 0);
+          speeds.sort((a,b) => a - b);
+          let medianSpeed = speeds[Math.floor(speeds.length / 2)] || 0;
+          let threshold = medianSpeed * 0.95;
+          intervals.forEach(i => {
+              let s = i.speedKmh || (i.dist / (i.sec / 3600));
+              if(!i.color) i.color = (s >= threshold && s > 0) ? '#3498db' : '#c9d1d9';
+          });
+      }
+  }
+  
+  colors = intervals.map(i => i.color);
+
+  let legendHtml = '';
+  if (hasProgrammedSteps && isPaceBased) {
+      legendHtml = `
+          <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; background:#f39c12; border-radius:3px;"></span> Échauff.</span>
+          <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; background:#e74c3c; border-radius:3px;"></span> Effort</span>
+          <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; background:#c9d1d9; border-radius:3px;"></span> Récup.</span>
+          <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; background:#3498db; border-radius:3px;"></span> Retour calme</span>
+      `;
+  } else if (isPaceBased) {
+      legendHtml = `
+          <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; background:#e74c3c; border-radius:3px;"></span> Actif (Allure)</span>
+          <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; background:#c9d1d9; border-radius:3px;"></span> Repos</span>
+      `;
+  } else {
+      legendHtml = `
+          <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; background:#3498db; border-radius:3px;"></span> Actif (Vitesse)</span>
+          <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:14px; background:#c9d1d9; border-radius:3px;"></span> Repos</span>
+      `;
+  }
+  let legendEl = document.getElementById('intervalLegend');
+  legendEl.innerHTML = legendHtml;
+  legendEl.style.display = 'flex';
+
+  if (isPaceBased) {
+      let maxPace = Math.max(...intervals.map(i => i.paceSec || (i.sec / i.dist))) * 1.2;
+      chartData = intervals.map(i => {
+          let p = i.paceSec || (i.sec / i.dist);
+          return maxPace - p; 
+      });
+
+      yAxisOpts = { display: false, beginAtZero: true, grace: '20%' };
+      tooltipOpts = {
+          callbacks: {
+              title: function(ctx) { 
+                  let idx = ctx[0].dataIndex;
+                  let titleStr = intervals[idx].label;
+                  if (intervals[idx].stepLabel) titleStr += " — " + intervals[idx].stepLabel;
+                  titleStr += "\nDurée : " + intervals[idx].compactTime;
+                  return titleStr;
+              },
+              label: function(ctx) { 
+                  let realPace = intervals[ctx.dataIndex].paceSec || (intervals[ctx.dataIndex].sec / intervals[ctx.dataIndex].dist);
+                  return 'Allure : ' + formatPace(realPace) + ' /km'; 
+              }
+          }
+      };
+      
+      dataLabelsOpts = {
+          color: '#2c3e50', font: { weight: 'bold', size: 10 }, anchor: 'end', align: 'end', offset: 4, textAlign: 'center',
+          formatter: (val, ctx) => {
+              let i = intervals[ctx.dataIndex];
+              let realPace = i.paceSec || (i.sec / i.dist);
+              return i.compactTime + '\n' + formatPace(realPace);
+          }
+      };
+
+  } else {
+      chartData = intervals.map(i => i.speedKmh || (i.dist / (i.sec / 3600)));
+      yAxisOpts = { display: false, beginAtZero: true, grace: '20%' };
+      
+      tooltipOpts = {
+          callbacks: {
+              title: function(ctx) { 
+                  let idx = ctx[0].dataIndex;
+                  let titleStr = intervals[idx].label;
+                  if (intervals[idx].stepLabel) titleStr += " — " + intervals[idx].stepLabel;
+                  titleStr += "\nDurée : " + intervals[idx].compactTime;
+                  return titleStr;
+              },
+              label: function(ctx) { 
+                  let realSpeed = intervals[ctx.dataIndex].speedKmh || (intervals[ctx.dataIndex].dist / (intervals[ctx.dataIndex].sec / 3600));
+                  return 'Vitesse : ' + realSpeed.toFixed(1) + ' km/h'; 
+              }
+          }
+      };
+      
+      dataLabelsOpts = {
+          color: '#2c3e50', font: { weight: 'bold', size: 10 }, anchor: 'end', align: 'end', offset: 4, textAlign: 'center',
+          formatter: (val, ctx) => {
+              let i = intervals[ctx.dataIndex];
+              let realSpeed = i.speedKmh || (i.dist / (i.sec / 3600));
+              return i.compactTime + '\n' + realSpeed.toFixed(1);
+          }
+      };
+  }
+
+  let wrapper = document.getElementById('intervalWrapper');
+  let inner = document.getElementById('intervalChartInner');
+  wrapper.style.display = 'block';
+  
+  let minWidth = intervals.length * 60;
+  if (minWidth > wrapper.clientWidth && wrapper.clientWidth > 0) {
+      inner.style.width = minWidth + 'px';
+  } else {
+      inner.style.width = '100%';
+  }
+
+  if (chartInstances.intervalModal) chartInstances.intervalModal.destroy();
+
+  const ctx = document.getElementById('intervalChartCanvas').getContext('2d');
+  chartInstances.intervalModal = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ data: chartData, backgroundColor: colors, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 35 } }, 
+      plugins: {
+        legend: { display: false },
+        title: { display: false }, 
+        tooltip: tooltipOpts,
+        datalabels: dataLabelsOpts
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: {size: 11}, autoSkip: false } },
+        y: yAxisOpts
+      }
+    }
+  });
+}
+
+function switchTab(tabId, btnElement) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  if(btnElement) btnElement.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+function parseNumber(val) {
+  if (!val || val === '--') return 0;
+  let str = String(val).trim().replace(/\s/g, ''); 
+  
+  let hasComma = str.includes(',');
+  let hasDot = str.includes('.');
+  
+  if (hasComma && hasDot) {
+      let commaIndex = str.indexOf(',');
+      let dotIndex = str.indexOf('.');
+      if (commaIndex < dotIndex) {
+          str = str.replace(/,/g, ''); 
+      } else {
+          str = str.replace(/\./g, ''); 
+          str = str.replace(',', '.');
+      }
+  } else if (hasComma) {
+      let parts = str.split(',');
+      if (parts.length === 2 && parts[1].length === 3) {
+          str = str.replace(',', '');
+      } else {
+          str = str.replace(',', '.');
+      }
+  }
+  let num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
+}
+
+function parseDuration(val) {
+  if (!val || val === '--') return 0;
+  let parts = String(val).split(':');
+  if(parts.length === 3) return (+parts[0]) * 3600 + (+parts[1]) * 60 + (+parts[2]);
+  if(parts.length === 2) return (+parts[0]) * 60 + (+parts[1]);
+  if(parts.length === 1) return parseFloat(parts[0]);
+  return 0;
+}
+function formatDuration(sec) {
+  let h = Math.floor(sec / 3600);
+  let m = Math.floor((sec % 3600) / 60);
+  let s = Math.round(sec % 60);
+  if (s === 60) { s = 0; m += 1; }
+  if (m === 60) { m = 0; h += 1; }
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+function extractDateString(garminDateStr) {
+  if (!garminDateStr || garminDateStr === '--') return null;
+  let d = garminDateStr.split(' ')[0].trim(); 
+  if (d.includes('/')) {
+     let p = d.split('/');
+     if (p[2] && p[2].length === 4) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+     if (p[0] && p[0].length === 4) return `${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
+  }
+  return d; 
+}
+function formatFrenchDate(isoDateStr) {
+  if (!isoDateStr) return "-";
+  const parts = isoDateStr.split('-');
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return isoDateStr;
+}
+
+function applyDateFilter() {
+  const minInput = document.getElementById('filterMin').value;
+  const maxInput = document.getElementById('filterMax').value;
+  let minTime = minInput ? new Date(minInput).getTime() : null;
+  let maxTime = maxInput ? new Date(maxInput).getTime() : null;
+  let filteredActivities = allRawActivities.filter(act => {
+    if (!act.isoDate) return true; 
+    let actTime = new Date(act.isoDate).getTime();
+    let passMin = minTime ? (actTime >= minTime) : true;
+    let passMax = maxTime ? (actTime <= maxTime) : true;
+    return passMin && passMax;
+  });
+  buildDashboardFromActivities(filteredActivities);
+}
+
+function buildDashboardFromActivities(activitiesArray) {
+  dashboardData.kpi = { count: 0, totalDistance: 0, totalDurationSec: 0, totalCalories: 0, totalElevation: 0, minDate: null, maxDate: null };
+  dashboardData.sports = {}; dashboardData.activities = [];
+  if (chartInstances.globalBar) chartInstances.globalBar.destroy();
+  Object.keys(chartInstances.cols).forEach(key => { if(chartInstances.cols[key]) chartInstances.cols[key].destroy(); });
+  chartInstances.cols = {};
+  document.querySelectorAll('.dynamic-tab-btn').forEach(el => el.remove());
+  document.getElementById('dynamic-tabs-container').innerHTML = '';
+  activitiesArray.forEach(act => {
+    if (act.isoDate) {
+      if (!dashboardData.kpi.minDate || act.isoDate < dashboardData.kpi.minDate) dashboardData.kpi.minDate = act.isoDate;
+      if (!dashboardData.kpi.maxDate || act.isoDate > dashboardData.kpi.maxDate) dashboardData.kpi.maxDate = act.isoDate;
+    }
+    dashboardData.kpi.count++; dashboardData.kpi.totalDistance += act.distance;
+    dashboardData.kpi.totalDurationSec += act.durationSec; dashboardData.kpi.totalCalories += act.calories;
+    dashboardData.kpi.totalElevation += act.elevation;
+    if (!dashboardData.sports[act.sport]) {
+      dashboardData.sports[act.sport] = { count: 0, distance: 0, durationSec: 0, calories: 0, elevation: 0, minDate: null, maxDate: null, activities: [] };
+    }
+    let sp = dashboardData.sports[act.sport];
+    sp.count++; sp.distance += act.distance; sp.durationSec += act.durationSec; sp.calories += act.calories; sp.elevation += act.elevation;
+    if (act.isoDate) {
+      if (!sp.minDate || act.isoDate < sp.minDate) sp.minDate = act.isoDate;
+      if (!sp.maxDate || act.isoDate > sp.maxDate) sp.maxDate = act.isoDate;
+    }
+    sp.activities.push(act); dashboardData.activities.push(act);
+  });
+  updateGlobalView();
+  Object.keys(dashboardData.sports).forEach(sportName => { buildSportTabHTML(sportName, dashboardData.sports[sportName]); });
+  
+  let activeTabBtn = document.querySelector('.tabs-header button.active');
+  if (activeTabBtn && activeTabBtn.textContent.includes("Palmarès")) {
+      buildPalmares();
+  } else if (activeTabBtn && activeTabBtn.textContent.includes("Comparateur")) {
+      initCompare();
+  } else {
+      switchTab('tab-global', document.querySelector('.tabs-header button'));
+  }
+}
+
+function renderGlobalCharts() {
+  const sportNames = Object.keys(dashboardData.sports);
+  const dataDistances = sportNames.map(s => parseFloat(dashboardData.sports[s].distance.toFixed(1)));
+  const ctxBar = document.getElementById('globalBarChart').getContext('2d');
+  chartInstances.globalBar = new Chart(ctxBar, {
+    type: 'bar',
+    data: { labels: sportNames, datasets: [{ label: 'Distance Cumulée (km)', data: dataDistances, backgroundColor: '#1BAE70', borderRadius: 6 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, layout: { padding: { top: 35, bottom: 15 } },
+      scales: { x: { grid: { display: false }, ticks: { font: {size: 13, family: 'Calibri'} } }, y: { beginAtZero: true, grace: '15%' } },
+      plugins: { legend: { position: 'bottom', labels: { font: {size: 12, family: 'Calibri'} } }, title: { display: true, text: 'Distance Totale par Discipline Sportive', font: {size: 14, family: 'Calibri'} }, datalabels: { color: '#2c3e50', anchor: 'end', align: 'end', offset: 2, font: { weight: 'bold', size: 12, family: 'Calibri' }, formatter: (value) => value > 0 ? value + ' km' : '' } }
+    }
+  });
+}
+
+function updateGlobalView() {
+  const k = dashboardData.kpi;
+  let periodText = "Période : Aucune donnée";
+  if (k.minDate && k.maxDate) { periodText = `Période : du ${formatFrenchDate(k.minDate)} au ${formatFrenchDate(k.maxDate)}`; }
+  document.getElementById('globalPeriodText').textContent = periodText;
+  document.getElementById('globalKpiCount').textContent = k.count;
+  document.getElementById('globalKpiDist').textContent = k.totalDistance.toFixed(1);
+  document.getElementById('globalKpiTime').textContent = formatDuration(k.totalDurationSec);
+  document.getElementById('globalKpiElev').textContent = k.totalElevation.toFixed(0);
+  const tbodySports = document.querySelector('#tableSyntheseSports tbody'); tbodySports.innerHTML = '';
+  let sortedSports = Object.keys(dashboardData.sports).map(name => ({ name: name, data: dashboardData.sports[name] })).sort((a, b) => b.data.distance - a.data.distance);
+  if (sortedSports.length === 0) { tbodySports.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px;">Aucune donnée. Importe tes fichiers Garmin...</td></tr>`; }
+  sortedSports.forEach(item => {
+    let d = item.data; const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="font-weight:bold; font-size:13px; color:var(--brand);"><span class="badge badge-sport">${item.name}</span></td><td style="font-weight:bold;">${d.count}</td><td class="text-ok" style="font-weight:bold;">${d.distance.toFixed(1)} km</td><td class="text-warn" style="font-weight:bold;">${formatDuration(d.durationSec)}</td><td>${d.elevation.toFixed(0)} m</td>`;
+    tbodySports.appendChild(tr);
+  });
+  const tbodyJournal = document.querySelector('#tableJournalGlobal tbody'); tbodyJournal.innerHTML = '';
+  let recentActivities = [...dashboardData.activities].slice(0, 50); 
+  if (recentActivities.length === 0) { tbodyJournal.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Aucune donnée. Importe tes fichiers Garmin...</td></tr>`; }
+  recentActivities.forEach(act => {
+    const tr = document.createElement('tr'); tr.className = "clickable-row"; tr.title = "Clique pour voir les détails"; tr.setAttribute("onclick", `openActivityDetails('${act.uid}')`);
+    tr.innerHTML = `<td>${formatFrenchDate(act.isoDate) || act.originalDate}</td><td><span class="badge badge-sport">${act.sport}</span></td><td style="font-weight:bold;">${act.title}</td><td>${act.distance.toFixed(2)} km</td><td>${act.durationFormatted}</td><td>${act.speed.toFixed(1)} km/h</td>`;
+    tbodyJournal.appendChild(tr);
+  });
+  renderGlobalCharts();
+}
+
+function buildSportTabHTML(sportName, sportData) {
+  const tabId = 'tab-sport-' + sportName.replace(/[\s\/]+/g, '-').toLowerCase();
+  const btn = document.createElement('button'); btn.className = 'tab-btn dynamic-tab-btn'; btn.textContent = sportName; btn.onclick = function() { switchTab(tabId, this); };
+  document.getElementById('tabsNav').appendChild(btn);
+  const container = document.getElementById('dynamic-tabs-container'); const div = document.createElement('div'); div.id = tabId; div.className = 'tab-content';
+  let tbodyHTML = sportData.activities.map(a => `<tr class="clickable-row" title="Clique pour voir les détails" onclick="openActivityDetails('${a.uid}')"><td>${formatFrenchDate(a.isoDate) || a.originalDate}</td><td style="font-weight:bold;">${a.title}</td><td>${a.distance.toFixed(2)} km</td><td>${a.durationFormatted}</td><td>${a.speed.toFixed(1)} km/h</td><td><span class="badge badge-neutral">+ ${a.elevation} m</span></td></tr>`).join('');
+  let sportPeriod = "Aucune date"; if(sportData.minDate && sportData.maxDate) { sportPeriod = `Période : du ${formatFrenchDate(sportData.minDate)} au ${formatFrenchDate(sportData.maxDate)}`; }
+  div.innerHTML = `
+    <div class="section">
+      <div class="box">
+        <div class="sect"><span>SYNTHÈSE DÉTAILLÉE — ${sportName.toUpperCase()}</span><span class="sect-period">${sportPeriod}</span></div>
+        <div class="col-chart-grid">
+          <div class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-title">Séances</div><div class="kpi-val">${sportData.count}</div></div>
+            <div class="kpi-card"><div class="kpi-title">Distance Cumulée</div><div class="kpi-val text-ok">${sportData.distance.toFixed(1)} <span style="font-size:12px; font-weight:normal;">km</span></div></div>
+            <div class="kpi-card"><div class="kpi-title">Temps d'effort</div><div class="kpi-val text-warn">${formatDuration(sportData.durationSec)}</div></div>
+            <div class="kpi-card" style="border-left: 4px solid var(--bad);"><div class="kpi-title">Dénivelé Positif</div><div class="kpi-val">${sportData.elevation.toFixed(0)} <span style="font-size:12px; font-weight:normal;">m</span></div></div>
+          </div>
+          <div class="chart-container"><canvas id="chart-${tabId}"></canvas></div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th style="width:15%">Date</th><th style="width:40%">Titre de l'activité</th><th style="width:12%">Distance</th><th style="width:13%">Durée</th><th style="width:10%">Vitesse Moy.</th><th style="width:10%">Dénivelé</th></tr></thead>
+            <tbody>${tbodyHTML}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+  const ctxChart = document.getElementById('chart-' + tabId).getContext('2d');
+  let recentActs = sportData.activities.slice(0, 10).reverse();
+  let labels = recentActs.map(a => formatFrenchDate(a.isoDate) || a.title.substring(0, 10)); let data = recentActs.map(a => parseFloat(a.distance.toFixed(2)));
+  chartInstances.cols[sportName] = new Chart(ctxChart, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Distance (km)', data: data, backgroundColor: '#e74c3c', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 25 } }, plugins: { legend: { display: false }, title: { display: true, text: 'Distance des 10 dernières séances (km)', font: {size: 13, family: 'Calibri'} }, datalabels: { color: '#2c3e50', anchor: 'end', align: 'end', offset: 2, font: { weight: 'bold', size: 10 }, formatter: (val) => val > 0 ? val : '' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grace: '15%' } } } });
+}
+
+// --- MODULE PALMARÈS ---
+function buildPalmares() {
+    const container = document.getElementById('hof-container');
+    if (!container) return;
+
+    try {
+        container.innerHTML = '';
+        
+        let sports = Object.keys(dashboardData.sports).sort();
+        if(sports.length === 0) {
+            container.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted);">Aucune donnée disponible pour établir les records.</p>';
+            return;
+        }
+
+        sports.forEach(sport => {
+            let acts = dashboardData.sports[sport].activities;
+            if(!acts || acts.length === 0) return;
+
+            let isPaceBased = (sport.toLowerCase().includes('course') || sport.toLowerCase().includes('marche'));
+
+            let distActs = acts.filter(a => typeof a.distance === 'number' && a.distance > 0 && a.distance < (isPaceBased ? 300 : 1000));
+            let maxDistAct = distActs.length > 0 ? distActs.reduce((max, a) => a.distance > max.distance ? a : max, distActs[0]) : null;
+
+            let timeActs = acts.filter(a => typeof a.durationSec === 'number' && a.durationSec > 0 && a.durationSec < 86400); 
+            let maxTimeAct = timeActs.length > 0 ? timeActs.reduce((max, a) => a.durationSec > max.durationSec ? a : max, timeActs[0]) : null;
+
+            let elevActs = acts.filter(a => typeof a.elevation === 'number' && a.elevation > 0 && a.elevation < 10000);
+            let maxElevAct = elevActs.length > 0 ? elevActs.reduce((max, a) => a.elevation > max.elevation ? a : max, elevActs[0]) : null;
+            
+            let validSpeedActs = acts.filter(a => typeof a.speed === 'number' && a.distance >= 1 && a.durationSec > 0); 
+            if (isPaceBased) {
+                validSpeedActs = validSpeedActs.filter(a => a.speed >= 4 && a.speed <= 22); 
+            } else {
+                validSpeedActs = validSpeedActs.filter(a => a.speed >= 10 && a.speed <= 50); 
+            }
+            let bestSpeedAct = validSpeedActs.length > 0 ? validSpeedActs.reduce((max, a) => a.speed > max.speed ? a : max, validSpeedActs[0]) : null;
+
+            if (!maxDistAct && !maxTimeAct && !maxElevAct && !bestSpeedAct) return;
+
+            let sectionDiv = document.createElement('div');
+            sectionDiv.className = 'section';
+            
+            let speedCardHTML = '';
+            if (bestSpeedAct) {
+                if (isPaceBased) {
+                    let bestPaceSec = 3600 / bestSpeedAct.speed;
+                    speedCardHTML = `
+                        <div class="hof-card" onclick="openActivityDetails('${bestSpeedAct.uid}')" title="${bestSpeedAct.title}">
+                            <div class="hof-title">⚡ Meilleure Allure Moy.</div>
+                            <div class="hof-val">${formatPace(bestPaceSec)} <span style="font-size:12px; font-weight:normal;">/km</span></div>
+                            <div class="hof-sub">${formatFrenchDate(bestSpeedAct.isoDate)}</div>
+                        </div>`;
+                } else {
+                    speedCardHTML = `
+                        <div class="hof-card" onclick="openActivityDetails('${bestSpeedAct.uid}')" title="${bestSpeedAct.title}">
+                            <div class="hof-title">⚡ Vitesse Moy. Max</div>
+                            <div class="hof-val">${bestSpeedAct.speed.toFixed(1)} <span style="font-size:12px; font-weight:normal;">km/h</span></div>
+                            <div class="hof-sub">${formatFrenchDate(bestSpeedAct.isoDate)}</div>
+                        </div>`;
+                }
+            }
+
+            let distCardHTML = maxDistAct ? `
+                <div class="hof-card" onclick="openActivityDetails('${maxDistAct.uid}')" title="${maxDistAct.title}">
+                    <div class="hof-title">📏 Plus Longue Distance</div>
+                    <div class="hof-val text-ok">${maxDistAct.distance.toFixed(2)} <span style="font-size:12px; font-weight:normal;">km</span></div>
+                    <div class="hof-sub">${formatFrenchDate(maxDistAct.isoDate)}</div>
+                </div>` : '';
+
+            let timeCardHTML = maxTimeAct ? `
+                <div class="hof-card" onclick="openActivityDetails('${maxTimeAct.uid}')" title="${maxTimeAct.title}">
+                    <div class="hof-title">⏱️ Plus Longue Durée</div>
+                    <div class="hof-val text-warn">${formatDuration(maxTimeAct.durationSec)}</div>
+                    <div class="hof-sub">${formatFrenchDate(maxTimeAct.isoDate)}</div>
+                </div>` : '';
+
+            let elevCardHTML = maxElevAct ? `
+                <div class="hof-card" onclick="openActivityDetails('${maxElevAct.uid}')" title="${maxElevAct.title}">
+                    <div class="hof-title">⛰️ Dénivelé Max</div>
+                    <div class="hof-val text-bad">${maxElevAct.elevation.toFixed(0)} <span style="font-size:12px; font-weight:normal;">m</span></div>
+                    <div class="hof-sub">${formatFrenchDate(maxElevAct.isoDate)}</div>
+                </div>` : '';
+
+            sectionDiv.innerHTML = `
+                <div class="box">
+                    <div class="sect"><span>👑 PALMARÈS — ${sport.toUpperCase()}</span></div>
+                    <div class="kpi-grid">
+                        ${distCardHTML}
+                        ${timeCardHTML}
+                        ${elevCardHTML}
+                        ${speedCardHTML}
+                    </div>
+                </div>
+            `;
+            container.appendChild(sectionDiv);
+        });
+    } catch (error) {
+        console.error("Erreur d'analyse du palmarès :", error);
+        container.innerHTML = '<p style="text-align:center; padding:20px; color:var(--bad);">Erreur lors de l\'analyse des données. Vérifie le format de ton fichier.</p>';
+    }
+}
+
+// --- MODULE COMPARATEUR ---
+
+function initCompare() {
+    let selectSport = document.getElementById('compSport');
+    selectSport.innerHTML = '<option value="all">🌍 Tous les sports (Vue Globale)</option>'; 
+    
+    let sports = Object.keys(dashboardData.sports).sort();
+    
+    sports.forEach(s => {
+        let opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        selectSport.appendChild(opt);
+    });
+
+    initCompareMode();
+}
+
+function initCompareMode() {
+    let mode = document.getElementById('compMode').value;
+    let sport = document.getElementById('compSport').value;
+    
+    if (mode === 'macro') {
+        document.getElementById('panel-macro').style.display = 'block';
+        document.getElementById('panel-micro').style.display = 'none';
+        
+        let acts = sport === 'all' ? dashboardData.activities : (dashboardData.sports[sport] ? dashboardData.sports[sport].activities : []);
+        if (acts.length > 0 && document.getElementById('compA_min').value === "") {
+            document.getElementById('compA_max').value = acts[0].isoDate;
+            document.getElementById('compA_min').value = acts[acts.length - 1].isoDate;
+        }
+    } else {
+        document.getElementById('panel-macro').style.display = 'none';
+        document.getElementById('panel-micro').style.display = 'block';
+        
+        if (sport === 'all') {
+            let sports = Object.keys(dashboardData.sports).sort();
+            if(sports.length > 0) {
+                document.getElementById('compSport').value = sports.includes("Course à pied") ? "Course à pied" : sports[0];
+                sport = document.getElementById('compSport').value;
+            }
+        }
+        
+        let selectTitle = document.getElementById('compSessionTitle');
+        selectTitle.innerHTML = '';
+        
+        let acts = dashboardData.sports[sport] ? dashboardData.sports[sport].activities : [];
+        
+        let titleCounts = {};
+        acts.forEach(a => {
+            titleCounts[a.title] = (titleCounts[a.title] || 0) + 1;
+        });
+        
+        let repeatedTitles = Object.keys(titleCounts).filter(t => titleCounts[t] > 1).sort();
+        
+        if (repeatedTitles.length === 0) {
+            selectTitle.innerHTML = '<option value="">Aucune séance répétée pour ce sport</option>';
+        } else {
+            repeatedTitles.forEach(t => {
+                let opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = `${t} (${titleCounts[t]} fois)`;
+                selectTitle.appendChild(opt);
+            });
+            runMicroCompare();
+        }
+    }
+}
+
+function getPeriodStats(acts, minDateStr, maxDateStr) {
+    let minTime = minDateStr ? new Date(minDateStr).getTime() : null;
+    let maxTime = maxDateStr ? new Date(maxDateStr).getTime() : null;
+    
+    let filtered = acts.filter(a => {
+        if (!a.isoDate) return false;
+        let d = new Date(a.isoDate).getTime();
+        let pass = true;
+        if (minTime && d < minTime) pass = false;
+        if (maxTime && d > maxTime) pass = false;
+        return pass;
+    });
+
+    let stats = { count: 0, dist: 0, duration: 0, elev: 0, avgSpeed: 0, avgHr: 0 };
+    if (filtered.length === 0) return stats;
+
+    stats.count = filtered.length;
+    let sumSpeed = 0, sumHr = 0, countHr = 0;
+
+    filtered.forEach(a => {
+        stats.dist += a.distance;
+        stats.duration += a.durationSec;
+        stats.elev += a.elevation;
+        sumSpeed += a.speed;
+        
+        let hr = parseNumber(getRawVal(a, 'Fréquence cardiaque moyenne'));
+        if (hr > 0) { sumHr += hr; countHr++; }
+    });
+
+    stats.avgSpeed = sumSpeed / stats.count;
+    stats.avgHr = countHr > 0 ? (sumHr / countHr) : 0;
+    
+    return stats;
+}
+
+function runMacroCompare() {
+    let sport = document.getElementById('compSport').value;
+    let aMin = document.getElementById('compA_min').value;
+    let aMax = document.getElementById('compA_max').value;
+    let bMin = document.getElementById('compB_min').value;
+    let bMax = document.getElementById('compB_max').value;
+
+    let allActs = dashboardData.activities;
+    let actsA_Global = allActs.filter(a => {
+        if (!a.isoDate) return false;
+        let t = new Date(a.isoDate).getTime();
+        return (!aMin || t >= new Date(aMin).getTime()) && (!aMax || t <= new Date(aMax).getTime());
+    });
+    let actsB_Global = allActs.filter(a => {
+        if (!a.isoDate) return false;
+        let t = new Date(a.isoDate).getTime();
+        return (!bMin || t >= new Date(bMin).getTime()) && (!bMax || t <= new Date(bMax).getTime());
+    });
+
+    let wrapper = document.getElementById('macroChartWrapper');
+    let resultsDiv = document.getElementById('macro-results');
+    
+    if (chartInstances.macroChart) chartInstances.macroChart.destroy();
+
+    if (sport === 'all') {
+        wrapper.style.display = 'block';
+        
+        let uniqueSports = new Set([...actsA_Global.map(a => a.sport), ...actsB_Global.map(a => a.sport)]);
+        let datasets = [];
+        
+        uniqueSports.forEach(sp => {
+            let durA = actsA_Global.filter(a => a.sport === sp).reduce((s, a) => s + a.durationSec, 0) / 3600;
+            let durB = actsB_Global.filter(a => a.sport === sp).reduce((s, a) => s + a.durationSec, 0) / 3600;
+            if (durA > 0 || durB > 0) {
+                datasets.push({
+                    label: sp,
+                    data: [durA, durB],
+                    backgroundColor: getSportColor(sp),
+                    borderRadius: 4
+                });
+            }
+        });
+
+        const ctx = document.getElementById('macroCompareChart').getContext('2d');
+        chartInstances.macroChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Période A', 'Période B'],
+                datasets: datasets
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: {font: {family: 'Calibri'}} },
+                    datalabels: {
+                        color: '#fff', font: {weight: 'bold', size: 12},
+                        formatter: (val) => val > 0.1 ? val.toFixed(1) + 'h' : ''
+                    },
+                    tooltip: {
+                        callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)} heures` }
+                    }
+                },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, title: {display: true, text: 'Charge d\'effort (Heures)', font: {weight: 'bold'}}, beginAtZero: true }
+                }
+            }
+        });
+
+        let html = `
+          <table class="data-table" style="font-size:13px; text-align:center;">
+            <thead>
+              <tr style="background:#f1f3f9;">
+                <th style="text-align:left; width:20%;">Discipline</th>
+                <th style="width:15%;">Séances (A ➔ B)</th>
+                <th style="width:25%;">Temps d'effort (A ➔ B)</th>
+                <th style="width:10%;">Δ Temps</th>
+                <th style="width:20%;">Distance (A ➔ B)</th>
+                <th style="width:10%;">Δ Dist.</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        let sortedSportsList = Array.from(uniqueSports).sort();
+        
+        let totalCountA = 0, totalCountB = 0;
+        let totalDurA = 0, totalDurB = 0;
+        let totalDistA = 0, totalDistB = 0;
+
+        sortedSportsList.forEach(sp => {
+            let spA = getPeriodStats(actsA_Global.filter(a => a.sport === sp), null, null);
+            let spB = getPeriodStats(actsB_Global.filter(a => a.sport === sp), null, null);
+            
+            totalCountA += spA.count; totalCountB += spB.count;
+            totalDurA += spA.duration; totalDurB += spB.duration;
+            totalDistA += spA.dist; totalDistB += spB.dist;
+
+            let diffDur = spB.duration - spA.duration;
+            let diffDist = spB.dist - spA.dist;
+            
+            let clsDur = diffDur > 0 ? 'delta-pos' : (diffDur < 0 ? 'delta-neg' : 'delta-neu');
+            let signDur = diffDur > 0 ? '+' : (diffDur < 0 ? '-' : '');
+            let dispDurDelta = diffDur !== 0 ? `${signDur}${formatDuration(Math.abs(diffDur))}` : '--';
+
+            let clsDist = diffDist > 0 ? 'delta-pos' : (diffDist < 0 ? 'delta-neg' : 'delta-neu');
+            let dispDistDelta = diffDist !== 0 ? (diffDist > 0 ? `+${diffDist.toFixed(1)}` : diffDist.toFixed(1)) : '--';
+
+            html += `<tr>
+                <td style="text-align:left;"><strong><span style="color:${getSportColor(sp)};">■</span> ${sp}</strong></td>
+                <td>${spA.count} ➔ ${spB.count}</td>
+                <td>${formatDuration(spA.duration)} ➔ ${formatDuration(spB.duration)}</td>
+                <td class="${clsDur}">${dispDurDelta}</td>
+                <td>${spA.dist.toFixed(1)} ➔ ${spB.dist.toFixed(1)}</td>
+                <td class="${clsDist}">${dispDistDelta}</td>
+            </tr>`;
+        });
+
+        let diffTotDur = totalDurB - totalDurA;
+        let signTotDur = diffTotDur > 0 ? '+' : (diffTotDur < 0 ? '-' : '');
+        let diffTotDist = totalDistB - totalDistA;
+        
+        html += `<tr style="background-color: #eaf0f6; font-weight:bold;">
+            <td style="text-align:left;">Bilan Global</td>
+            <td>${totalCountA} ➔ ${totalCountB}</td>
+            <td>${formatDuration(totalDurA)} ➔ ${formatDuration(totalDurB)}</td>
+            <td class="${diffTotDur > 0 ? 'delta-pos' : 'delta-neg'}">${diffTotDur !== 0 ? signTotDur + formatDuration(Math.abs(diffTotDur)) : '--'}</td>
+            <td>${totalDistA.toFixed(1)} ➔ ${totalDistB.toFixed(1)}</td>
+            <td class="${diffTotDist > 0 ? 'delta-pos' : 'delta-neg'}">${diffTotDist !== 0 ? (diffTotDist > 0 ? '+' + diffTotDist.toFixed(1) : diffTotDist.toFixed(1)) : '--'}</td>
+        </tr>`;
+
+        html += `</tbody></table>`;
+        resultsDiv.innerHTML = html;
+
+    } else {
+        wrapper.style.display = 'none';
+
+        let actsSpecific = dashboardData.sports[sport] ? dashboardData.sports[sport].activities : [];
+        let statsA = getPeriodStats(actsSpecific, aMin, aMax);
+        let statsB = getPeriodStats(actsSpecific, bMin, bMax);
+        
+        let isPaceBased = (sport.toLowerCase().includes('course') || sport.toLowerCase().includes('marche'));
+
+        let html = `
+          <table class="data-table" style="font-size:14px;">
+            <thead>
+              <tr>
+                <th style="width:25%;">Métrique (${sport})</th>
+                <th style="width:25%;">Période A</th>
+                <th style="width:25%;">Période B</th>
+                <th style="width:25%;">Évolution (B vs A)</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        let diffCount = statsB.count - statsA.count;
+        let clsCount = diffCount > 0 ? 'delta-pos' : (diffCount < 0 ? 'delta-neg' : 'delta-neu');
+        let strCount = diffCount > 0 ? `+${diffCount}` : diffCount;
+        html += `<tr><td><strong>Nb Séances</strong></td><td>${statsA.count}</td><td>${statsB.count}</td><td class="${clsCount}">${strCount}</td></tr>`;
+
+        html += `<tr style="background-color: #f1f3f9;"><td colspan="4" style="text-align: center; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 1px;">Profil de la séance type</td></tr>`;
+
+        let avgDistA = statsA.count > 0 ? statsA.dist / statsA.count : 0;
+        let avgDistB = statsB.count > 0 ? statsB.dist / statsB.count : 0;
+        let diffAvgDist = avgDistB - avgDistA;
+        let clsAvgDist = diffAvgDist > 0 ? 'delta-pos' : (diffAvgDist < 0 ? 'delta-neg' : 'delta-neu');
+        let strAvgDist = diffAvgDist > 0 ? `+${diffAvgDist.toFixed(2)} km` : `${diffAvgDist.toFixed(2)} km`;
+        html += `<tr><td>Distance moy. / séance</td><td>${avgDistA.toFixed(2)} km</td><td>${avgDistB.toFixed(2)} km</td><td class="${clsAvgDist}">${strAvgDist}</td></tr>`;
+
+        let avgDurA = statsA.count > 0 ? statsA.duration / statsA.count : 0;
+        let avgDurB = statsB.count > 0 ? statsB.duration / statsB.count : 0;
+        let diffAvgDur = avgDurB - avgDurA;
+        let clsAvgDur = diffAvgDur > 0 ? 'delta-pos' : (diffAvgDur < 0 ? 'delta-neg' : 'delta-neu');
+        let signAvgDur = diffAvgDur > 0 ? '+' : (diffAvgDur < 0 ? '-' : '');
+        html += `<tr><td>Durée moy. / séance</td><td>${formatDuration(avgDurA)}</td><td>${formatDuration(avgDurB)}</td><td class="${clsAvgDur}">${signAvgDur}${formatDuration(Math.abs(diffAvgDur))}</td></tr>`;
+
+        let avgElevA = statsA.count > 0 ? statsA.elev / statsA.count : 0;
+        let avgElevB = statsB.count > 0 ? statsB.elev / statsB.count : 0;
+        let diffAvgElev = avgElevB - avgElevA;
+        let clsAvgElev = diffAvgElev > 0 ? 'delta-pos' : (diffAvgElev < 0 ? 'delta-neg' : 'delta-neu');
+        let strAvgElev = diffAvgElev > 0 ? `+${diffAvgElev.toFixed(0)} m` : `${diffAvgElev.toFixed(0)} m`;
+        html += `<tr><td>Dénivelé moy. / séance</td><td>${avgElevA.toFixed(0)} m</td><td>${avgElevB.toFixed(0)} m</td><td class="${clsAvgElev}">${strAvgElev}</td></tr>`;
+
+        html += `<tr style="background-color: #f1f3f9;"><td colspan="4" style="text-align: center; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 1px;">Volume Global Cumulé</td></tr>`;
+
+        let diffDist = statsB.dist - statsA.dist;
+        let clsDist = diffDist > 0 ? 'delta-pos' : (diffDist < 0 ? 'delta-neg' : 'delta-neu');
+        let strDist = diffDist > 0 ? `+${diffDist.toFixed(1)} km` : `${diffDist.toFixed(1)} km`;
+        html += `<tr><td>Distance totale</td><td>${statsA.dist.toFixed(1)} km</td><td>${statsB.dist.toFixed(1)} km</td><td class="${clsDist}">${strDist}</td></tr>`;
+
+        let diffDur = statsB.duration - statsA.duration;
+        let clsDur = diffDur > 0 ? 'delta-pos' : (diffDur < 0 ? 'delta-neg' : 'delta-neu');
+        let signDur = diffDur > 0 ? '+' : (diffDur < 0 ? '-' : '');
+        html += `<tr><td>Temps d'effort total</td><td>${formatDuration(statsA.duration)}</td><td>${formatDuration(statsB.duration)}</td><td class="${clsDur}">${signDur}${formatDuration(Math.abs(diffDur))}</td></tr>`;
+
+        let diffElev = statsB.elev - statsA.elev;
+        let clsElev = diffElev > 0 ? 'delta-pos' : (diffElev < 0 ? 'delta-neg' : 'delta-neu');
+        let strElev = diffElev > 0 ? `+${diffElev.toFixed(0)} m` : `${diffElev.toFixed(0)} m`;
+        html += `<tr><td>Dénivelé positif total</td><td>${statsA.elev.toFixed(0)} m</td><td>${statsB.elev.toFixed(0)} m</td><td class="${clsElev}">${strElev}</td></tr>`;
+
+        html += `<tr style="background-color: #f1f3f9;"><td colspan="4" style="text-align: center; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 1px;">Intensité & Cardio</td></tr>`;
+
+        if (isPaceBased) {
+            let paceA = statsA.avgSpeed > 0 ? 3600 / statsA.avgSpeed : 0;
+            let paceB = statsB.avgSpeed > 0 ? 3600 / statsB.avgSpeed : 0;
+            let diffPace = paceB - paceA;
+            let clsPerf = diffPace < 0 ? 'delta-pos' : (diffPace > 0 ? 'delta-neg' : 'delta-neu');
+            let signPerf = diffPace > 0 ? '+' : (diffPace < 0 ? '-' : '');
+            
+            let dispA = paceA > 0 ? formatPace(paceA) + ' /km' : '--';
+            let dispB = paceB > 0 ? formatPace(paceB) + ' /km' : '--';
+            let dispDiff = paceA > 0 && paceB > 0 ? `${signPerf}${Math.abs(Math.round(diffPace))} sec/km` : '--';
+            
+            html += `<tr><td>Allure Moyenne globale</td><td>${dispA}</td><td>${dispB}</td><td class="${clsPerf}">${dispDiff}</td></tr>`;
+        } else {
+            let diffSpeed = statsB.avgSpeed - statsA.avgSpeed;
+            let clsPerf = diffSpeed > 0 ? 'delta-pos' : (diffSpeed < 0 ? 'delta-neg' : 'delta-neu');
+            let signPerf = diffSpeed > 0 ? '+' : '';
+            html += `<tr><td>Vitesse Moyenne globale</td><td>${statsA.avgSpeed.toFixed(1)} km/h</td><td>${statsB.avgSpeed.toFixed(1)} km/h</td><td class="${clsPerf}">${signPerf}${diffSpeed.toFixed(1)} km/h</td></tr>`;
+        }
+
+        let diffHr = statsB.avgHr - statsA.avgHr;
+        let clsHr = diffHr < 0 ? 'delta-pos' : (diffHr > 0 ? 'delta-neg' : 'delta-neu');
+        let signHr = diffHr > 0 ? '+' : '';
+        let dispA = statsA.avgHr > 0 ? statsA.avgHr.toFixed(0) + ' bpm' : '--';
+        let dispB = statsB.avgHr > 0 ? statsB.avgHr.toFixed(0) + ' bpm' : '--';
+        let dispDiff = statsA.avgHr > 0 && statsB.avgHr > 0 ? `${signHr}${diffHr.toFixed(0)} bpm` : '--';
+        html += `<tr><td>Cardio Moyen global</td><td>${dispA}</td><td>${dispB}</td><td class="${clsHr}">${dispDiff}</td></tr>`;
+
+        html += `</tbody></table>`;
+        resultsDiv.innerHTML = html;
+    }
+}
+
+// --- V15.0 : MODULE MICRO (HYBRIDE) ---
+function runMicroCompare() {
+    let sport = document.getElementById('compSport').value;
+    let title = document.getElementById('compSessionTitle').value;
+    if (!title) return;
+
+    let isPaceBased = (sport.toLowerCase().includes('course') || sport.toLowerCase().includes('marche'));
+    
+    let allActs = dashboardData.sports[sport] ? dashboardData.sports[sport].activities : [];
+    let targetActs = allActs.filter(a => a.title === title).sort((a,b) => a.isoDate.localeCompare(b.isoDate));
+
+    let labels = [];
+    let globalPerfData = [];
+    let globalHrData = [];
+    
+    let pacingData = [];
+    let tableData = [];
+
+    targetActs.forEach(act => {
+        labels.push(formatFrenchDate(act.isoDate));
+        
+        // 1. Extraction des données GLOBALES (Pour le 1er graphique, marche à 100%)
+        let hr = parseNumber(getRawVal(act, 'Fréquence cardiaque moyenne'));
+        globalHrData.push(hr > 0 ? hr : null);
+
+        if (isPaceBased) {
+            let paceSec = act.speed > 0 ? (3600 / act.speed) : null;
+            globalPerfData.push(paceSec);
+        } else {
+            globalPerfData.push(act.speed);
+        }
+
+        // 2. Extraction des données PACING (Bonus si circuits importés)
+        let hasIntervals = act.savedIntervals && act.savedIntervals.length > 0;
+        
+        if (hasIntervals) {
+            let effortBlocs = act.savedIntervals.filter(i => i.stepLabel === "Effort" || (i.color && i.color === '#e74c3c'));
+            
+            if (effortBlocs.length >= 2) {
+                if (isPaceBased) {
+                    let paces = effortBlocs.map(i => i.paceSec || (i.sec / i.dist)).filter(p => p > 0);
+                    let minPace = Math.min(...paces);
+                    let maxPace = Math.max(...paces);
+                    let deltaSec = maxPace - minPace;
+                    pacingData.push(deltaSec);
+                    
+                    tableData.push({
+                        date: formatFrenchDate(act.isoDate),
+                        uid: act.uid,
+                        hasData: true,
+                        best: formatPace(minPace) + ' /km',
+                        worst: formatPace(maxPace) + ' /km',
+                        delta: Math.round(deltaSec) + ' sec'
+                    });
+                } else {
+                    let speeds = effortBlocs.map(i => i.speedKmh || (i.dist / (i.sec / 3600))).filter(s => s > 0);
+                    let minSpeed = Math.min(...speeds);
+                    let maxSpeed = Math.max(...speeds);
+                    let deltaSpeed = maxSpeed - minSpeed;
+                    pacingData.push(deltaSpeed);
+                    
+                    tableData.push({
+                        date: formatFrenchDate(act.isoDate),
+                        uid: act.uid,
+                        hasData: true,
+                        best: maxSpeed.toFixed(1) + ' km/h',
+                        worst: minSpeed.toFixed(1) + ' km/h',
+                        delta: deltaSpeed.toFixed(1) + ' km/h'
+                    });
+                }
+            } else {
+                 pacingData.push(null);
+                 tableData.push({ date: formatFrenchDate(act.isoDate), uid: act.uid, hasData: false });
+            }
+        } else {
+            pacingData.push(null);
+            tableData.push({ date: formatFrenchDate(act.isoDate), uid: act.uid, hasData: false });
+        }
+    });
+
+    if (chartInstances.microChart) chartInstances.microChart.destroy();
+    if (chartInstances.microPacingChart) chartInstances.microPacingChart.destroy();
+    
+    // --- GRAPHIQUE 1 : VUE GLOBALE ---
+    let yAxis1Opts, tooltipPerfLabel;
+    if (isPaceBased) {
+        yAxis1Opts = {
+            type: 'linear', position: 'left', reverse: true,
+            title: { display: true, text: 'Allure Globale (min/km)', color: '#2980b9', font: {weight: 'bold'} },
+            ticks: { callback: function(value) { return formatPace(value); }, color: '#2980b9' }
+        };
+        tooltipPerfLabel = function(ctx) { return 'Allure Globale : ' + formatPace(ctx.raw) + ' /km'; };
+    } else {
+        yAxis1Opts = {
+            type: 'linear', position: 'left',
+            title: { display: true, text: 'Vitesse Globale (km/h)', color: '#2980b9', font: {weight: 'bold'} },
+            ticks: { callback: function(value) { return value.toFixed(1) + ' km/h'; }, color: '#2980b9' }
+        };
+        tooltipPerfLabel = function(ctx) { return 'Vitesse Globale : ' + ctx.raw.toFixed(1) + ' km/h'; };
+    }
+    
+    let yAxis2Opts = {
+        type: 'linear', position: 'right', grid: { drawOnChartArea: false },
+        title: { display: true, text: 'Cardio Global (bpm)', color: '#c0392b', font: {weight: 'bold'} },
+        ticks: { color: '#c0392b' }
+    };
+    
+    const ctxGlobal = document.getElementById('microCompareChart').getContext('2d');
+    chartInstances.microChart = new Chart(ctxGlobal, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: isPaceBased ? 'Allure Globale' : 'Vitesse Globale',
+                    data: globalPerfData,
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#2980b9',
+                    tension: 0.2,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Cardio Moyen',
+                    data: globalHrData,
+                    borderColor: '#e74c3c',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 4,
+                    pointBackgroundColor: '#c0392b',
+                    tension: 0.2,
+                    spanGaps: true,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'top', labels: {font: {family: 'Calibri'}} },
+                datalabels: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.datasetIndex === 0) return tooltipPerfLabel(ctx);
+                            if (ctx.datasetIndex === 1) return 'Cardio Moyen : ' + Math.round(ctx.raw) + ' bpm';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { font: {family: 'Calibri'} } },
+                y: yAxis1Opts,
+                y1: yAxis2Opts
+            }
+        }
+    });
+
+    // --- GRAPHIQUE 2 : PACING ---
+    let yAxisPacingOpts = {
+        type: 'linear', position: 'left',
+        title: { display: true, text: isPaceBased ? 'Écart de Pacing (Secondes)' : 'Écart de Vitesse (km/h)', color: '#27ae60', font: {weight: 'bold'} },
+        beginAtZero: true
+    };
+
+    const ctxPacing = document.getElementById('microPacingChart').getContext('2d');
+    chartInstances.microPacingChart = new Chart(ctxPacing, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Indice de Régularité (Delta)',
+                    data: pacingData,
+                    borderColor: '#2ecc71',
+                    backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#27ae60',
+                    tension: 0.2,
+                    spanGaps: false, 
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: {font: {family: 'Calibri'}} },
+                datalabels: { 
+                    color: '#2c3e50', font: {weight: 'bold'}, align: 'top', offset: 5,
+                    formatter: (val) => val !== null ? (isPaceBased ? Math.round(val) + 's' : val.toFixed(1)) : ''
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return 'Écart : ' + (isPaceBased ? Math.round(ctx.raw) + ' sec' : ctx.raw.toFixed(1) + ' km/h'); }
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { font: {family: 'Calibri'} } },
+                y: yAxisPacingOpts
+            }
+        }
+    });
+
+    // --- TABLEAU DYNAMIQUE HYBRIDE ---
+    let tableDiv = document.getElementById('micro-pacing-table');
+    let htmlTable = `
+      <table class="data-table" style="font-size:13px; text-align:center;">
+        <thead>
+          <tr style="background:#f1f3f9;">
+            <th style="width:20%;">Date de la séance</th>
+            <th style="width:25%;">Meilleur Bloc (Effort)</th>
+            <th style="width:25%;">Pire Bloc (Effort)</th>
+            <th style="width:15%;">Indice de Pacing</th>
+            <th style="width:15%;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    tableData.forEach(row => {
+        if (row.hasData) {
+            htmlTable += `<tr>
+                <td><strong>${row.date}</strong></td>
+                <td style="color:var(--ok); font-weight:bold;">${row.best}</td>
+                <td style="color:var(--bad); font-weight:bold;">${row.worst}</td>
+                <td style="font-weight:bold; background-color:#eaf0f6;">${row.delta}</td>
+                <td><button class="btn secondary" style="padding:4px 8px; font-size:11px;" onclick="openActivityDetails('${row.uid}')">Voir Séance</button></td>
+            </tr>`;
+        } else {
+            htmlTable += `<tr style="color:#999;">
+                <td><strong>${row.date}</strong></td>
+                <td colspan="3"><em>Détail des circuits non importé</em></td>
+                <td><button class="btn secondary" style="padding:4px 8px; font-size:11px;" onclick="openActivityDetails('${row.uid}')">📥 Ajouter le détail</button></td>
+            </tr>`;
+        }
+    });
+
+    htmlTable += `</tbody></table>`;
+    tableDiv.innerHTML = htmlTable;
+}
+</script>
+</body>
+</html>
