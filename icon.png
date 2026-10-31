@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Générateur icon.png</title></head>
+<body style="text-align:center; padding:50px; font-family:sans-serif; background:#f5f7fb;">
+  <h2>Ton icône de Tableau de Bord Sportif</h2>
+  <canvas id="iconCanvas" width="512" height="512" style="border-radius:15%; box-shadow:0 10px 20px rgba(0,0,0,0.2);"></canvas>
+  <br><br>
+  <button onclick="downloadIcon()" style="padding:15px 30px; font-size:16px; font-weight:bold; background:#2c3e50; color:white; border:none; border-radius:30px; cursor:pointer;">
+    📥 Télécharger icon.png
+  </button>
+
+  <script>
+    const canvas = document.getElementById('iconCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Fond rouge (ta variable --brand)
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(0, 0, 512, 512);
+    
+    // Ligne de fréquence cardiaque / montagne (blanc)
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 45;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    ctx.beginPath();
+    ctx.moveTo(80, 256);
+    ctx.lineTo(170, 256);
+    ctx.lineTo(256, 110); // Pic haut (dénivelé/cardio)
+    ctx.lineTo(340, 390); // Pic bas
+    ctx.lineTo(410, 256);
+    ctx.lineTo(440, 256);
+    ctx.stroke();
+
+    function downloadIcon() {
+      const link = document.createElement('a');
+      link.download = 'icon.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  </script>
+</body>
+</html>
