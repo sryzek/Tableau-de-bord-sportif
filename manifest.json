@@ -1,8 +1,16 @@
 {
-  "name": "Dashboard Sportif",
-  "short_name": "TdB Sport",
-  "start_url": ".",
+  "name": "Mon tableau de bord sportif",
+  "short_name": "Mon tableau de bord",
+  "description": "Système de gestion WMS pour le tdb",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f5f7fb",
-  "theme_color": "#e74c3c"
+  "background_color": "#f4f6f8",
+  "theme_color": "#722F37",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
