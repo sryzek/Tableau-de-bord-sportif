@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <!-- Le user-scalable=no et le viewport-fit=cover sont vitaux pour l'effet App -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>TdB Sportif</title>
     <style>
@@ -17,6 +18,7 @@
             --nav-bg: rgba(28, 29, 36, 0.9);
         }
 
+        /* 1. Verrouillage du scroll global */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -28,17 +30,18 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            /* 100dvh garantit que la barre de nav mobile ne cache pas le bas */
             height: 100dvh;
             overflow: hidden; 
             display: flex;
             flex-direction: column;
         }
 
+        /* 2. Architecture App (Header, Main, Nav) */
         header {
             height: 60px;
             display: flex;
             align-items: center;
-            justify-content: center;
             padding: 0 20px;
             font-size: 1.2rem;
             font-weight: 700;
@@ -49,9 +52,10 @@
         main {
             flex-grow: 1;
             position: relative;
-            overflow: hidden;
+            overflow: hidden; /* Pas de scroll ici, les vues gèrent leur espace */
         }
 
+        /* 3. Système de Vues */
         .view {
             position: absolute;
             top: 0;
@@ -62,6 +66,8 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease;
+            /* Si on a exceptionnellement besoin de scroller à l'intérieur d'une vue spécifique */
+            overflow-y: auto; 
         }
 
         .view.active {
@@ -69,14 +75,13 @@
             pointer-events: auto;
         }
 
+        /* 4. Bento Grid Design */
         .bento-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: repeat(3, 1fr);
+            grid-template-rows: auto auto auto;
             gap: 15px;
             height: 100%;
-            max-width: 800px;
-            margin: 0 auto;
         }
 
         .bento-card {
@@ -85,7 +90,7 @@
             padding: 20px;
             display: flex;
             flex-direction: column;
-            justify-content: space-evenly;
+            justify-content: center;
             cursor: pointer;
             transition: transform 0.1s ease;
         }
@@ -103,6 +108,7 @@
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 1px;
+            margin-bottom: 5px;
         }
 
         .bento-value {
@@ -110,35 +116,20 @@
             font-weight: 800;
         }
 
+        /* Couleurs dynamiques pour les cards */
         .run-val { color: var(--accent-run); }
         .bike-val { color: var(--accent-bike); }
         .roller-val { color: var(--accent-roller); }
 
-        .activities-container {
-            max-width: 800px;
-            margin: 0 auto;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .activities-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            overflow-y: auto;
-            padding-bottom: 20px;
-            flex-grow: 1;
-        }
-
+        /* Barre de navigation inférieure */
         nav {
-            height: 80px;
+            height: 80px; /* Plus grand pour l'ergonomie mobile */
             background-color: var(--nav-bg);
             backdrop-filter: blur(10px);
             display: flex;
             justify-content: space-around;
             align-items: center;
-            padding-bottom: 15px;
+            padding-bottom: 15px; /* Espace pour la barre d'accueil iOS/Android */
             border-top: 1px solid rgba(255,255,255,0.05);
             flex-shrink: 0;
         }
@@ -167,9 +158,10 @@
             color: var(--accent-primary);
         }
 
+        /* 5. Modale Détail (Glissement depuis le bas) */
         #detail-modal {
             position: fixed;
-            top: 100%;
+            top: 100%; /* Caché en bas par défaut */
             left: 0;
             width: 100%;
             height: 100dvh;
@@ -181,7 +173,7 @@
         }
 
         #detail-modal.open {
-            top: 0;
+            top: 0; /* Apparaît en recouvrant tout */
         }
 
         .modal-header {
@@ -205,10 +197,8 @@
         .modal-content {
             padding: 20px;
             flex-grow: 1;
+            /* Le seul endroit où le scroll est toléré si le graph est très grand */
             overflow-y: auto; 
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
         }
 
         .placeholder-graph {
@@ -260,23 +250,21 @@
 
         <!-- Vue 2 : Liste des séances -->
         <div id="view-activities" class="view">
-            <div class="activities-container">
-                <h2 style="margin-bottom: 15px;">Dernières séances</h2>
-                <div class="activities-list">
-                    <div class="bento-card" style="padding: 15px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; min-height: 80px;">
-                        <div style="display: flex; flex-direction: column; justify-content: space-between;">
-                            <div class="bento-title">Course - 10km Ludopital</div>
-                            <div style="font-weight: 600;">45:55</div>
-                        </div>
-                        <div class="run-val" style="font-weight: bold;">4'35/km</div>
+            <h2 style="margin-bottom: 15px;">Dernières séances</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="bento-card" style="padding: 15px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div class="bento-title">Course - 10km Ludopital</div>
+                        <div style="font-weight: 600;">45:55</div>
                     </div>
-                    <div class="bento-card" style="padding: 15px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; min-height: 80px;">
-                        <div style="display: flex; flex-direction: column; justify-content: space-between;">
-                            <div class="bento-title">Vélotaf - Lys > Mairie</div>
-                            <div style="font-weight: 600;">15.2 km</div>
-                        </div>
-                        <div class="bike-val" style="font-weight: bold;">32 min</div>
+                    <div class="run-val" style="font-weight: bold;">4'35/km</div>
+                </div>
+                <div class="bento-card" style="padding: 15px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div class="bento-title">Vélotaf - Lys > Mairie</div>
+                        <div style="font-weight: 600;">15.2 km</div>
                     </div>
+                    <div class="bike-val" style="font-weight: bold;">32 min</div>
                 </div>
             </div>
         </div>
@@ -309,24 +297,29 @@
     </div>
 
     <script>
+        // Gestion de la navigation Bottom Tab Bar
         const navBtns = document.querySelectorAll('.nav-btn');
         const views = document.querySelectorAll('.view');
         const header = document.getElementById('app-header');
 
         navBtns.forEach(btn => {
             btn.addEventListener('click', () => {
+                // Retrait de la classe active sur tous les boutons et vues
                 navBtns.forEach(b => b.classList.remove('active'));
                 views.forEach(v => v.classList.remove('active'));
                 
+                // Activation du bouton cliqué et de sa vue cible
                 btn.classList.add('active');
                 const targetId = btn.getAttribute('data-target');
                 document.getElementById(targetId).classList.add('active');
 
+                // Changement de titre dynamique
                 if(targetId === 'view-home') header.innerText = 'Dashboard Sportif';
                 if(targetId === 'view-activities') header.innerText = 'Historique FIT/CSV';
             });
         });
 
+        // Gestion de la Modale détaillée
         const modal = document.getElementById('detail-modal');
         const modalTitle = document.getElementById('modal-title');
         const modalDesc = document.getElementById('modal-desc');
