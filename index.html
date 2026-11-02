@@ -48,6 +48,7 @@ html,body{
   position: sticky; top: 0; z-index: 50; background: #f5f7fb;
   padding: 8px 10px 0px; margin: -8px -10px 0;
   border-bottom: 1px solid rgba(0,0,0,0.05); box-shadow: 0 6px 15px rgba(0,0,0,0.03);
+  transition: padding 0.3s ease, margin 0.3s ease;
 }
 
 .bar{
@@ -160,7 +161,7 @@ table.data-table th { background: #f1f3f9; font-weight: 700; text-transform: upp
 .delta-neg { color: #E74C3C; font-weight: bold; }
 .delta-neu { color: #666; font-weight: bold; }
 
-/* --- NOVEAUTÉS : MODE FOCUS --- */
+/* --- NOUVEAUTÉ : MODE FOCUS --- */
 body.focus-mode .bar, 
 body.focus-mode .toolbar {
     display: none !important;
@@ -477,7 +478,7 @@ let currentOpenedActivityUid = null;
 document.addEventListener("DOMContentLoaded", () => { 
     document.getElementById('lblDate').textContent = dashboardData.dateMaj; 
     loadDataFromStorage();
-    
+
     // Ajout de l'événement pour le bouton Focus
     document.getElementById('btnToggleFocus').addEventListener('click', () => {
         document.body.classList.toggle('focus-mode');
