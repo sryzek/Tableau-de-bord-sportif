@@ -161,7 +161,7 @@ table.data-table th { background: #f1f3f9; font-weight: 700; text-transform: upp
 .delta-neg { color: #E74C3C; font-weight: bold; }
 .delta-neu { color: #666; font-weight: bold; }
 
-/* --- NOUVEAUTÉ : MODE FOCUS --- */
+/* --- NOUVEAUTÉS : MODE FOCUS --- */
 body.focus-mode .bar, 
 body.focus-mode .toolbar {
     display: none !important;
@@ -204,6 +204,25 @@ body.focus-mode .sticky-header-group {
 body.focus-mode .fab-focus {
     background-color: var(--brand); /* Devient rouge quand le focus est actif */
 }
+
+/* Gestion du scroll horizontal fluide pour les graphiques surchargés */
+.scroll-x {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 10px;
+}
+
+.scroll-x .chart-container {
+    min-width: 900px; /* Force l'étirement du canvas pour aérer les données */
+    height: 300px;
+}
+
+/* Personnalisation discrète de la barre de scroll */
+.scroll-x::-webkit-scrollbar { height: 6px; }
+.scroll-x::-webkit-scrollbar-track { background: #f1f3f9; border-radius: 4px; }
+.scroll-x::-webkit-scrollbar-thumb { background: #c9d1d9; border-radius: 4px; }
 
 @media (max-width: 768px) {
   .wrap { padding: 4px 6px 12px; padding-top: env(safe-area-inset-top); }
@@ -288,7 +307,12 @@ body.focus-mode .fab-focus {
           <div class="kpi-card"><div class="kpi-title">Temps d'Effort</div><div class="kpi-val text-warn" id="globalKpiTime">00:00:00</div><div class="kpi-sub">cumulé</div></div>
           <div class="kpi-card"><div class="kpi-title">Dénivelé +</div><div class="kpi-val text-bad" id="globalKpiElev">0</div><div class="kpi-sub">mètres</div></div>
         </div>
-        <div class="charts-grid"><div class="chart-container"><canvas id="globalBarChart"></canvas></div></div>
+        
+        <div class="charts-grid">
+            <div class="scroll-x">
+                <div class="chart-container"><canvas id="globalBarChart"></canvas></div>
+            </div>
+        </div>
       </div>
     </div>
     <div class="section">
@@ -478,7 +502,7 @@ let currentOpenedActivityUid = null;
 document.addEventListener("DOMContentLoaded", () => { 
     document.getElementById('lblDate').textContent = dashboardData.dateMaj; 
     loadDataFromStorage();
-
+    
     // Ajout de l'événement pour le bouton Focus
     document.getElementById('btnToggleFocus').addEventListener('click', () => {
         document.body.classList.toggle('focus-mode');
@@ -1286,7 +1310,18 @@ function renderGlobalCharts() {
     data: { labels: sportNames, datasets: [{ label: 'Distance Cumulée (km)', data: dataDistances, backgroundColor: '#1BAE70', borderRadius: 6 }] },
     options: {
       responsive: true, maintainAspectRatio: false, layout: { padding: { top: 35, bottom: 15 } },
-      scales: { x: { grid: { display: false }, ticks: { font: {size: 13, family: 'Calibri'} } }, y: { beginAtZero: true, grace: '15%' } },
+      scales: { 
+          x: { 
+              grid: { display: false }, 
+              ticks: { 
+                  autoSkip: false, 
+                  maxRotation: 45, 
+                  minRotation: 45, 
+                  font: {size: 12, family: 'Calibri'} 
+              } 
+          }, 
+          y: { beginAtZero: true, grace: '15%' } 
+      },
       plugins: { legend: { position: 'bottom', labels: { font: {size: 12, family: 'Calibri'} } }, title: { display: true, text: 'Distance Totale par Discipline Sportive', font: {size: 14, family: 'Calibri'} }, datalabels: { color: '#2c3e50', anchor: 'end', align: 'end', offset: 2, font: { weight: 'bold', size: 12, family: 'Calibri' }, formatter: (value) => value > 0 ? value + ' km' : '' } }
     }
   });
