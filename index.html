@@ -51,18 +51,6 @@
             padding: 0 20px;
             border-bottom: 1px solid rgba(255,255,255,0.05);
             flex-shrink: 0;
-            overflow: hidden;
-            transition: height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
-        }
-
-        /* CLASSE DE MASQUAGE DU HEADER (MODE FOCUS) */
-        body.header-hidden header {
-            height: 0;
-            padding-top: 0;
-            padding-bottom: 0;
-            opacity: 0;
-            border-bottom: none;
-            pointer-events: none;
         }
 
         .header-title {
@@ -212,7 +200,6 @@
 
         .nav-btn svg { width: 24px; height: 24px; fill: currentColor; }
         .nav-btn.active { color: var(--accent-primary); }
-        .nav-btn.toggle-active { color: var(--text-main); } /* Highlight discret pour le mode focus */
 
         /* MODALE */
         #detail-modal {
@@ -303,21 +290,25 @@
         <!-- VUE 1 : BENTO GRID -->
         <div id="view-home" class="view active">
             <div class="bento-grid">
+                <!-- Volume total de l'année -->
                 <div class="bento-card bento-large">
                     <div class="bento-title" id="bento-vol-title">Volume Total</div>
-                    <div class="bento-value" id="bento-vol-val">0 <span style="font-size: 1rem; color: var(--text-muted);"> km</span></div>
+                    <div class="bento-value" id="bento-vol-val">0 <span style="font-size: 1rem; color: var(--text-muted);">km</span></div>
                 </div>
                 
+                <!-- Course -->
                 <div class="bento-card">
                     <div class="bento-title">Course</div>
-                    <div class="bento-value run-val" id="bento-run-val">0<span style="font-size: 1rem;"> km</span></div>
+                    <div class="bento-value run-val" id="bento-run-val">0<span style="font-size: 1rem;">km</span></div>
                 </div>
                 
+                <!-- Vélo -->
                 <div class="bento-card">
                     <div class="bento-title">Vélo</div>
-                    <div class="bento-value bike-val" id="bento-bike-val">0<span style="font-size: 1rem;"> km</span></div>
+                    <div class="bento-value bike-val" id="bento-bike-val">0<span style="font-size: 1rem;">km</span></div>
                 </div>
                 
+                <!-- Roller Vitesse (Dernière sortie) -->
                 <div class="bento-card bento-large" style="background: linear-gradient(135deg, var(--card-bg) 0%, rgba(48, 209, 88, 0.1) 100%);">
                     <div class="bento-title">Roller Vitesse</div>
                     <div class="bento-value roller-val" id="bento-roller-val">Aucune donnée</div>
@@ -338,18 +329,11 @@
 
     <!-- NAVIGATION BOTTOM BAR -->
     <nav>
-        <button class="nav-btn tab-link active" data-target="view-home">
+        <button class="nav-btn active" data-target="view-home">
             <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
             Accueil
         </button>
-        
-        <!-- Bouton d'action pour le Mode Focus -->
-        <button class="nav-btn" id="btn-focus-mode">
-            <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-            Focus
-        </button>
-
-        <button class="nav-btn tab-link" data-target="view-activities">
+        <button class="nav-btn" data-target="view-activities">
             <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/><path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
             Activités
         </button>
@@ -380,21 +364,14 @@
     </div>
 
     <script>
-        // --- GESTION DU MODE FOCUS (Nouveau Bouton) ---
-        const btnFocus = document.getElementById('btn-focus-mode');
-        btnFocus.addEventListener('click', () => {
-            document.body.classList.toggle('header-hidden');
-            btnFocus.classList.toggle('toggle-active');
-        });
-
-        // --- INITIALISATION UI NATIVE (Onglets) ---
-        const tabBtns = document.querySelectorAll('.tab-link');
+        // --- INITIALISATION UI NATIVE ---
+        const navBtns = document.querySelectorAll('.nav-btn');
         const views = document.querySelectorAll('.view');
         const headerTitle = document.querySelector('.header-title');
 
-        tabBtns.forEach(btn => {
+        navBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                tabBtns.forEach(b => b.classList.remove('active'));
+                navBtns.forEach(b => b.classList.remove('active'));
                 views.forEach(v => v.classList.remove('active'));
                 
                 btn.classList.add('active');
@@ -406,11 +383,11 @@
             });
         });
 
-        // --- MOTEUR DE DONNÉES ---
+        // --- MOTEUR DE DONNÉES (Adapté de ton ancienne version) ---
         Chart.register(ChartDataLabels);
         let chartInstance = null;
         let allRawActivities = [];
-        const STORAGE_KEY = 'garmin_dashboard_data_v10';
+        const STORAGE_KEY = 'garmin_dashboard_data_v10'; // Récupération directe de tes anciennes données
         let currentOpenedActivityUid = null;
 
         document.addEventListener("DOMContentLoaded", () => { 
@@ -634,7 +611,7 @@
             const p = iso.split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
         }
 
-        // --- MISE A JOUR UI ---
+        // --- MISE A JOUR UI (LIAISON DONNEES -> BENTO) ---
         function buildDashboard() {
             updateBentoGrid();
             updateActivitiesList();
@@ -648,13 +625,14 @@
             document.getElementById('bento-vol-title').innerText = `Volume ${currentYear}`;
 
             allRawActivities.forEach(act => {
-                let s = act.sport.toLowerCase();
-                
+                // Filtre sur l'année en cours pour le global (ou toutes si pas de date)
                 if(act.isoDate && act.isoDate.startsWith(currentYear)) {
                     totalDist += act.distance;
-                    if(s.includes('course') || s.includes('run') || s.includes('marche')) runDist += act.distance;
-                    if(s.includes('cyclisme') || s.includes('vélo')) bikeDist += act.distance;
                 }
+                
+                let s = act.sport.toLowerCase();
+                if(s.includes('course') || s.includes('run')) runDist += act.distance;
+                if(s.includes('cyclisme') || s.includes('vélo')) bikeDist += act.distance;
                 
                 if(s.includes('roller')) {
                     if(!latestRoller || (act.isoDate && act.isoDate > latestRoller.isoDate)) {
@@ -663,9 +641,9 @@
                 }
             });
 
-            document.getElementById('bento-vol-val').innerHTML = `${Math.round(totalDist)} <span style="font-size: 1rem; color: var(--text-muted);"> km</span>`;
-            document.getElementById('bento-run-val').innerHTML = `${Math.round(runDist)}<span style="font-size: 1rem;"> km</span>`;
-            document.getElementById('bento-bike-val').innerHTML = `${Math.round(bikeDist)}<span style="font-size: 1rem;"> km</span>`;
+            document.getElementById('bento-vol-val').innerHTML = `${Math.round(totalDist)} <span style="font-size: 1rem; color: var(--text-muted);">km</span>`;
+            document.getElementById('bento-run-val').innerHTML = `${Math.round(runDist)}<span style="font-size: 1rem;">km</span>`;
+            document.getElementById('bento-bike-val').innerHTML = `${Math.round(bikeDist)}<span style="font-size: 1rem;">km</span>`;
 
             if(latestRoller && latestRoller.speed > 0) {
                 document.getElementById('bento-roller-val').innerHTML = `${latestRoller.speed.toFixed(1)} <span style="font-size:1rem;">km/h</span>`;
@@ -728,6 +706,7 @@
                 
             document.getElementById('mdl-fcmoy').innerText = act.hr > 0 ? `${act.hr} bpm` : '--';
 
+            // Tracer le graph si on a des intervalles
             if(chartInstance) chartInstance.destroy();
             const ctx = document.getElementById('modalChartCanvas').getContext('2d');
 
@@ -745,6 +724,7 @@
                     }
                 });
             } else {
+                // Pas d'intervalle : on trace juste une ligne fictive d'illustration
                 chartInstance = new Chart(ctx, {
                     type: 'line',
                     data: { labels: ['Début', 'Milieu', 'Fin'], datasets: [{ data: [act.speed*0.9, act.speed*1.1, act.speed], borderColor: '#30d158', tension: 0.4 }] },
