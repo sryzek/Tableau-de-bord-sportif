@@ -305,17 +305,17 @@
             <div class="bento-grid">
                 <div class="bento-card bento-large">
                     <div class="bento-title" id="bento-vol-title">Volume Total</div>
-                    <div class="bento-value" id="bento-vol-val">0 <span style="font-size: 1rem; color: var(--text-muted);">km</span></div>
+                    <div class="bento-value" id="bento-vol-val">0 <span style="font-size: 1rem; color: var(--text-muted);"> km</span></div>
                 </div>
                 
                 <div class="bento-card">
                     <div class="bento-title">Course</div>
-                    <div class="bento-value run-val" id="bento-run-val">0<span style="font-size: 1rem;">km</span></div>
+                    <div class="bento-value run-val" id="bento-run-val">0<span style="font-size: 1rem;"> km</span></div>
                 </div>
                 
                 <div class="bento-card">
                     <div class="bento-title">Vélo</div>
-                    <div class="bento-value bike-val" id="bento-bike-val">0<span style="font-size: 1rem;">km</span></div>
+                    <div class="bento-value bike-val" id="bento-bike-val">0<span style="font-size: 1rem;"> km</span></div>
                 </div>
                 
                 <div class="bento-card bento-large" style="background: linear-gradient(135deg, var(--card-bg) 0%, rgba(48, 209, 88, 0.1) 100%);">
@@ -648,13 +648,13 @@
             document.getElementById('bento-vol-title').innerText = `Volume ${currentYear}`;
 
             allRawActivities.forEach(act => {
+                let s = act.sport.toLowerCase();
+                
                 if(act.isoDate && act.isoDate.startsWith(currentYear)) {
                     totalDist += act.distance;
+                    if(s.includes('course') || s.includes('run') || s.includes('marche')) runDist += act.distance;
+                    if(s.includes('cyclisme') || s.includes('vélo')) bikeDist += act.distance;
                 }
-                
-                let s = act.sport.toLowerCase();
-                if(s.includes('course') || s.includes('run')) runDist += act.distance;
-                if(s.includes('cyclisme') || s.includes('vélo')) bikeDist += act.distance;
                 
                 if(s.includes('roller')) {
                     if(!latestRoller || (act.isoDate && act.isoDate > latestRoller.isoDate)) {
@@ -663,9 +663,9 @@
                 }
             });
 
-            document.getElementById('bento-vol-val').innerHTML = `${Math.round(totalDist)} <span style="font-size: 1rem; color: var(--text-muted);">km</span>`;
-            document.getElementById('bento-run-val').innerHTML = `${Math.round(runDist)}<span style="font-size: 1rem;">km</span>`;
-            document.getElementById('bento-bike-val').innerHTML = `${Math.round(bikeDist)}<span style="font-size: 1rem;">km</span>`;
+            document.getElementById('bento-vol-val').innerHTML = `${Math.round(totalDist)} <span style="font-size: 1rem; color: var(--text-muted);"> km</span>`;
+            document.getElementById('bento-run-val').innerHTML = `${Math.round(runDist)}<span style="font-size: 1rem;"> km</span>`;
+            document.getElementById('bento-bike-val').innerHTML = `${Math.round(bikeDist)}<span style="font-size: 1rem;"> km</span>`;
 
             if(latestRoller && latestRoller.speed > 0) {
                 document.getElementById('bento-roller-val').innerHTML = `${latestRoller.speed.toFixed(1)} <span style="font-size:1rem;">km/h</span>`;
