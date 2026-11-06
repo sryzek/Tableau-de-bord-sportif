@@ -45,9 +45,9 @@ html,body{
 .wrap{ max-width:1400px; margin:0 auto; padding:8px 10px 24px; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 
 .sticky-header-group {
-  position: sticky; top: 0; z-index: 50; background: #f5f7fb;
+  position: relative; background: #f5f7fb;
   padding: 8px 10px 0px; margin: -8px -10px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.05); box-shadow: 0 6px 15px rgba(0,0,0,0.03);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   transition: padding 0.3s ease, margin 0.3s ease;
 }
 
@@ -264,7 +264,7 @@ body.focus-mode .fab-focus {
           <div class="name">Tableau de Bord des Activités</div>
           <div class="meta-line">Mise à jour : <span id="lblDate"></span> | Source : <span id="lblSource">Cache Local</span></div>
         </div>
-        <div class="ver">V15.0 (Tout-en-un CSV & FIT)</div>
+        <div class="ver">V15.1 (Tout-en-un CSV & FIT)</div>
       </div>
     </div>
     
@@ -1832,7 +1832,7 @@ function runMacroCompare() {
     }
 }
 
-// --- V15.0 : MODULE MICRO (HYBRIDE) ---
+// --- V15.1 : MODULE MICRO (HYBRIDE) ---
 function runMicroCompare() {
     let sport = document.getElementById('compSport').value;
     let title = document.getElementById('compSessionTitle').value;
